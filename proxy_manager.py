@@ -398,20 +398,23 @@ def get_agent_connection_info(tool: str) -> Dict[str, Any]:
         info["env"] = {
             "OPENAI_BASE_URL": base_url_openai,
             "OPENAI_API_KEY": key,
-            "MODEL": "gemini-3.8-flash-high"
+            "CUSTOM_BASE_URL": base_url_openai,
+            "HERMES_INFERENCE_PROVIDER": "custom:antiroute",
+            "HERMES_INFERENCE_MODEL": "gemini-3.8-flash-high"
         }
         info["commands"] = [
-            f'export OPENAI_BASE_URL="{base_url_openai}"',
-            f'export OPENAI_API_KEY="{key}"',
-            'hermes --model gemini-3.8-flash-high'
+            "./run-hermes.sh",
+            "hermes --provider custom:antiroute -m gemini-3.8-flash-high"
         ]
         info["snippet"] = (
-            "# Hermes Agent Environment Setup\n"
-            f"export OPENAI_BASE_URL=\"{base_url_openai}\"\n"
-            f"export OPENAI_API_KEY=\"{key}\"\n"
-            "export MODEL=\"gemini-3.8-flash-high\"\n\n"
-            "# Run Hermes\n"
-            "hermes"
+            "# Run Hermes with Antigravity Gemini:\n"
+            "./run-hermes.sh\n\n"
+            "# Or invoke hermes directly with custom provider:\n"
+            "hermes --provider custom:antiroute -m gemini-3.8-flash-high\n\n"
+            "# Configured in ~/.hermes/config.yaml under 'custom_providers':\n"
+            f"#   base_url: {base_url_openai}\n"
+            f"#   api_key: {key}\n"
+            "#   model: gemini-3.8-flash-high"
         )
 
     elif tool_key == "claude":
@@ -616,6 +619,54 @@ def configure_opencode(set_default: bool = False, local_dir: Optional[Path] = No
         return True, f"Successfully configured OpenCode in {target_path}"
     except Exception as e:
         return False, f"Failed to configure OpenCode: {e}"
+
+
+def configure_hermes(set_default: bool = True, hermes_dir: Optional[Path] = None) -> Tuple[bool, str]:
+    """
+    Configure Hermes Agent to recognize AntiRoute as a custom provider.
+    Updates ~/.hermes/config.yaml with custom_providers entry and sets default model.
+    """
+    target_dir = hermes_dir or (Path.home() / ".hermes")
+    target_path = target_dir / "config.yaml"
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        import yaml
+        if target_path.exists():
+            cfg = yaml.safe_load(target_path.read_text()) or {}
+        else:
+            cfg = {}
+
+        if not isinstance(cfg, dict):
+            cfg = {}
+
+        providers = cfg.get("custom_providers") or []
+        if not isinstance(providers, list):
+            providers = []
+
+        providers = [p for p in providers if isinstance(p, dict) and p.get("name") != "antiroute"]
+        providers.append({
+            "name": "antiroute",
+            "base_url": f"http://{DEFAULT_HOST}:{DEFAULT_PORT}/v1",
+            "api_key": DEFAULT_API_KEY,
+            "model": "gemini-3.8-flash-high",
+            "models": {
+                "gemini-3.8-flash-high": {"context_length": 1000000},
+                "gemini-3.1-pro-preview": {"context_length": 1000000}
+            }
+        })
+        cfg["custom_providers"] = providers
+
+        if set_default or "model" not in cfg or not isinstance(cfg["model"], dict):
+            if "model" not in cfg or not isinstance(cfg["model"], dict):
+                cfg["model"] = {}
+            cfg["model"]["default"] = "gemini-3.8-flash-high"
+            cfg["model"]["provider"] = "custom:antiroute"
+            cfg["model"]["base_url"] = f"http://{DEFAULT_HOST}:{DEFAULT_PORT}/v1"
+
+        target_path.write_text(yaml.dump(cfg, sort_keys=False, default_flow_style=False))
+        return True, f"Successfully configured Hermes in {target_path}"
+    except Exception as e:
+        return False, f"Failed to configure Hermes: {e}"
 
 
 def export_agent_env(tool: str, target_file: Optional[str] = None) -> str:

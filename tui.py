@@ -228,11 +228,15 @@ class TUIApp:
             self.set_flash(f"Generated executable script: {Path(path).name}!", is_error=False)
         elif ch in [ord('c'), ord('C')]:
             tool = AGENT_TOOLS[self.agent_selected_idx]
-            if tool == "OpenCode":
+            norm = pm.normalize_tool_name(tool)
+            if norm == "opencode":
                 ok, msg = pm.configure_opencode(set_default=True)
                 self.set_flash("Registered 'antigravity' in ~/.config/opencode/opencode.json!", is_error=not ok)
+            elif norm == "hermes":
+                ok, msg = pm.configure_hermes(set_default=True)
+                self.set_flash("Registered 'antiroute' in ~/.hermes/config.yaml!", is_error=not ok)
             else:
-                self.set_flash(f"No custom JSON setup needed for {tool}.", is_error=False)
+                self.set_flash(f"No custom config setup needed for {tool}.", is_error=False)
         elif ch in [ord('l'), ord('L'), 10, 13]:  # Enter or L to launch launcher
             tool = AGENT_TOOLS[self.agent_selected_idx]
             self.action_launch_agent(tool)
@@ -581,7 +585,8 @@ class TUIApp:
         ry += 2
 
         # Action Buttons for this tool
-        if selected_tool == "OpenCode":
+        norm = pm.normalize_tool_name(selected_tool)
+        if norm in ["opencode", "hermes"]:
             btn_str = "[E] Export .env  │  [C] Auto-Configure  │  [L/Enter] Launch Now"
         else:
             btn_str = "[E] Export .env  │  [G] Generate Launcher  │  [L/Enter] Launch Now"

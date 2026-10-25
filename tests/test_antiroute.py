@@ -64,6 +64,15 @@ class TestProxyManager(unittest.TestCase):
         self.assertEqual(data["provider"]["antigravity"]["options"]["apiKey"], "sk-antigravity-claude")
         self.assertEqual(data["model"], "antigravity/gemini-3.8-flash-high")
 
+    def test_configure_hermes(self):
+        ok, msg = pm.configure_hermes(set_default=True, hermes_dir=self.test_dir)
+        self.assertTrue(ok)
+        hermes_yaml = self.test_dir / "config.yaml"
+        self.assertTrue(hermes_yaml.exists())
+        content = hermes_yaml.read_text()
+        self.assertIn("antiroute", content)
+        self.assertIn("gemini-3.8-flash-high", content)
+
 
 class TestTUIRender(unittest.TestCase):
     class MockWindow:

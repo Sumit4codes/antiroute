@@ -22,8 +22,8 @@ ln -sf "${SCRIPT_DIR}/run-hermes.sh" "${BIN_DIR}/run-hermes-gemini"
 ln -sf "${SCRIPT_DIR}/run-opencode.sh" "${BIN_DIR}/run-opencode-gemini"
 ln -sf "${SCRIPT_DIR}/run-claude.sh" "${BIN_DIR}/run-claude-gemini"
 
-# Auto-configure OpenCode if available
-python3 -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); import proxy_manager as pm; pm.configure_opencode()" 2>/dev/null || true
+# Auto-configure OpenCode and Hermes if available
+python3 -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); import proxy_manager as pm; pm.configure_opencode(); pm.configure_hermes()" 2>/dev/null || true
 
 echo "=================================================================="
 echo " ✦ AntiRoute CLI & TUI Successfully Installed! ✦"

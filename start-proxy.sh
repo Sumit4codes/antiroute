@@ -5,10 +5,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}"
+
 CONFIG_FILE="${SCRIPT_DIR}/config.yaml"
 BINARY="${SCRIPT_DIR}/cli-proxy-api"
 LOG_FILE="${SCRIPT_DIR}/proxy.log"
 PID_FILE="${SCRIPT_DIR}/proxy.pid"
+
+mkdir -p "${SCRIPT_DIR}/.auth"
 
 if [[ ! -x "${BINARY}" ]]; then
     chmod +x "${BINARY}"
@@ -56,5 +60,6 @@ for _ in {1..15}; do
 done
 
 echo ""
-echo "Warning: Proxy started (PID: ${PID}), but health check did not respond yet."
+echo "Warning: Proxy started (PID: ${PID}), but health check did not respond within timeout."
 echo "Check '${LOG_FILE}' for details."
+exit 1

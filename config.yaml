@@ -6,7 +6,7 @@ remote-management:
   allow-remote: false
   secret-key: "$2a$10$u2Toca6dCTzAXqJtBqL09O.LreUcrU4T1kFYHOxVh4.oZXt3gmMde"
 oauth:
-  auth-dir: "/home/sumit/Desktop/gemini_claude/.auth"
+  auth-dir: ".auth"
   model-alias:
     antigravity:
       - name: "gemini-3.8-flash-high"

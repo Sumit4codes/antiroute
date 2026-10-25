@@ -65,7 +65,8 @@ jobs:
 
       - name: Launch Proxy Daemon
         run: |
-          ./start-proxy.sh
+          mkdir -p .auth
+          ./start-proxy.sh || { echo "=== proxy.log ==="; cat proxy.log 2>/dev/null || true; exit 1; }
 
       - name: Verify Health Endpoint
         run: |

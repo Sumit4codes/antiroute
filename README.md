@@ -3,6 +3,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/Sumit4codes/antiroute/actions"><img src="https://img.shields.io/github/actions/workflow/status/Sumit4codes/antiroute/ci.yml?branch=main&style=for-the-badge&label=CI/CD" alt="CI/CD Status"></a>
   <a href="https://github.com/Sumit4codes/antiroute/stargazers"><img src="https://img.shields.io/github/stars/Sumit4codes/antiroute?color=38bdf8&style=for-the-badge&logo=star" alt="Stars"></a>
   <a href="https://github.com/Sumit4codes/antiroute/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-34d399?style=for-the-badge" alt="License: MIT"></a>
   <a href="https://github.com/Sumit4codes/antiroute/releases"><img src="https://img.shields.io/badge/Version-v1.0.0-c084fc?style=for-the-badge" alt="Version"></a>

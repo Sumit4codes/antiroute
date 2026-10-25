@@ -1,0 +1,135 @@
+name: AntiRoute CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  lint-and-test:
+    name: Lint & Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Linting & Test Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+
+      - name: Run ShellCheck on Bash Scripts
+        run: |
+          shellcheck -e SC1091,SC2155,SC2086 antiroute tui.sh install.sh export-env.sh run-*.sh setup-systemd.sh start-proxy.sh stop-proxy.sh status-proxy.sh
+
+      - name: Python Syntax & Lint Check
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings
+          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=140 --statistics
+
+      - name: Run Unit Tests
+        run: |
+          python -m unittest discover tests -v
+
+  daemon-smoke-test:
+    name: Proxy Daemon Smoke Test
+    runs-on: ubuntu-latest
+    needs: [lint-and-test]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Ensure Executable Permissions
+        run: |
+          chmod +x cli-proxy-api antiroute tui.sh start-proxy.sh stop-proxy.sh status-proxy.sh install.sh
+
+      - name: Launch Proxy Daemon
+        run: |
+          ./start-proxy.sh
+
+      - name: Verify Health Endpoint
+        run: |
+          curl -s -f http://127.0.0.1:8317/ | grep -q "CLI Proxy API Server"
+          echo "✔ Health check passed!"
+
+      - name: Verify Models Endpoint
+        run: |
+          MODELS_RESP=$(curl -s -f -H "Authorization: Bearer sk-antigravity-claude" http://127.0.0.1:8317/v1/models)
+          echo "Models response: $MODELS_RESP"
+          echo "$MODELS_RESP" | grep -q "object"
+          echo "✔ Models endpoint responding!"
+
+      - name: Verify CLI Status Command
+        run: |
+          ./antiroute status
+
+      - name: Graceful Daemon Shutdown
+        run: |
+          ./stop-proxy.sh
+          if curl -s http://127.0.0.1:8317/ >/dev/null 2>&1; then
+            echo "Error: Daemon is still running after stop!"
+            exit 1
+          fi
+          echo "✔ Daemon stopped cleanly!"
+
+  release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+    needs: [daemon-smoke-test]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Prepare Release Package
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          ARCHIVE_NAME="antiroute-${VERSION}-linux-x86_64"
+          mkdir -p "dist/${ARCHIVE_NAME}"
+
+          # Copy essential binaries, scripts, configs, and docs
+          cp -r cli-proxy-api antiroute tui.py tui.sh proxy_manager.py \
+                config.yaml config.example.yaml opencode.json .env.example \
+                install.sh export-env.sh run-*.sh setup-systemd.sh \
+                start-proxy.sh stop-proxy.sh status-proxy.sh \
+                README.md LICENSE static/ assets/ "dist/${ARCHIVE_NAME}/"
+
+          cd dist
+          tar -czf "${ARCHIVE_NAME}.tar.gz" "${ARCHIVE_NAME}"
+          zip -r "${ARCHIVE_NAME}.zip" "${ARCHIVE_NAME}"
+          sha256sum "${ARCHIVE_NAME}.tar.gz" > "${ARCHIVE_NAME}.tar.gz.sha256"
+          sha256sum "${ARCHIVE_NAME}.zip" > "${ARCHIVE_NAME}.zip.sha256"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          generate_release_notes: true
+          draft: false
+          prerelease: false

@@ -28,3 +28,5 @@ ENV/
 # System files
 .DS_Store
 Thumbs.db
+run-aider.sh
+run-goose.sh

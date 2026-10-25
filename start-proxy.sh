@@ -41,7 +41,7 @@ echo "${PID}" > "${PID_FILE}"
 echo "Proxy started with PID ${PID}."
 echo "Waiting for server to become ready on http://127.0.0.1:8317..."
 
-for i in {1..15}; do
+for _ in {1..15}; do
     if curl -s http://127.0.0.1:8317/ > /dev/null 2>&1; then
         echo ""
         echo "=================================================================="

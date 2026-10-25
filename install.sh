@@ -38,6 +38,7 @@ echo ""
 if [[ ":$PATH:" != *":${BIN_DIR}:"* ]]; then
     echo "Notice: ${BIN_DIR} is not currently in your PATH."
     echo "Add it by adding this line to your ~/.zshrc or ~/.bashrc:"
+    # shellcheck disable=SC2016
     echo '  export PATH="$HOME/.local/bin:$PATH"'
 fi
 echo "=================================================================="

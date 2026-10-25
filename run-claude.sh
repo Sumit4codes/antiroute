@@ -13,7 +13,7 @@ if ! curl -s --connect-timeout 2 http://127.0.0.1:8317/ > /dev/null 2>&1; then
 fi
 
 # Check for claude binary
-CLAUDE_BIN="$(which claude 2>/dev/null || echo "")"
+CLAUDE_BIN="$(command -v claude 2>/dev/null || echo "")"
 if [[ -z "${CLAUDE_BIN}" ]]; then
     if [[ -x "/home/sumit/.npm-global/bin/claude" ]]; then
         CLAUDE_BIN="/home/sumit/.npm-global/bin/claude"

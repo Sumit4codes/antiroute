@@ -12,7 +12,7 @@ if [[ -f "${PID_FILE}" ]]; then
     if ps -p "${PID}" > /dev/null 2>&1; then
         echo "Stopping CLIProxyAPI (PID: ${PID})..."
         kill "${PID}" || true
-        for i in {1..10}; do
+        for _ in {1..10}; do
             if ! ps -p "${PID}" > /dev/null 2>&1; then
                 break
             fi

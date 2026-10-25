@@ -48,6 +48,10 @@ case "${TOOL}" in
     *)
         echo "Unknown tool: ${TOOL}"
         echo "Available tools: opencode, hermes, claude, aider, goose, droid"
-        return 1 2>/dev/null || exit 1
+        if (return 0 2>/dev/null); then
+            return 1
+        else
+            exit 1
+        fi
         ;;
 esac

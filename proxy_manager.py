@@ -325,12 +325,36 @@ def update_default_target_model(new_model: str) -> Tuple[bool, str]:
         return False, f"Failed to update config.yaml: {e}"
 
 
+def normalize_tool_name(tool: str) -> str:
+    """Normalize any tool display name to standard slug."""
+    k = tool.lower().strip()
+    if any(x in k for x in ["claude"]):
+        return "claude"
+    if any(x in k for x in ["opencode", "open-code"]):
+        return "opencode"
+    if any(x in k for x in ["hermes"]):
+        return "hermes"
+    if any(x in k for x in ["aider"]):
+        return "aider"
+    if any(x in k for x in ["goose"]):
+        return "goose"
+    if any(x in k for x in ["droid"]):
+        return "droid"
+    if any(x in k for x in ["cline", "roo"]):
+        return "cline"
+    if "continue" in k:
+        return "continue"
+    if any(x in k for x in ["python", "langchain", "crew"]):
+        return "python"
+    return k.replace(" ", "-")
+
+
 def get_agent_connection_info(tool: str) -> Dict[str, Any]:
     """
     Returns connection environment variables, launch scripts, and config snippets
     for various agent tools: OpenCode, Hermes, Claude Code, Aider, Cline, etc.
     """
-    tool_key = tool.lower().strip()
+    tool_key = normalize_tool_name(tool)
     base_url_anthropic = f"http://{DEFAULT_HOST}:{DEFAULT_PORT}"
     base_url_openai = f"http://{DEFAULT_HOST}:{DEFAULT_PORT}/v1"
     key = DEFAULT_API_KEY
@@ -343,7 +367,7 @@ def get_agent_connection_info(tool: str) -> Dict[str, Any]:
         "description": ""
     }
 
-    if tool_key in ["opencode", "open-code"]:
+    if tool_key == "opencode":
         info["name"] = "OpenCode"
         info["description"] = "Open-source terminal-based AI coding assistant."
         info["env"] = {
@@ -368,7 +392,7 @@ def get_agent_connection_info(tool: str) -> Dict[str, Any]:
             "#   apiKey: sk-antigravity-claude"
         )
 
-    elif tool_key in ["hermes", "hermes-agent", "nous-hermes"]:
+    elif tool_key == "hermes":
         info["name"] = "Hermes Agent"
         info["description"] = "Autonomous agent framework supporting tool use and multi-step reasoning."
         info["env"] = {
@@ -390,7 +414,7 @@ def get_agent_connection_info(tool: str) -> Dict[str, Any]:
             "hermes"
         )
 
-    elif tool_key in ["claude", "claude-code"]:
+    elif tool_key == "claude":
         info["name"] = "Claude Code"
         info["description"] = "Anthropic's official terminal coding agent."
         info["env"] = {
@@ -411,7 +435,7 @@ def get_agent_connection_info(tool: str) -> Dict[str, Any]:
             "./run-claude.sh"
         )
 
-    elif tool_key in ["aider", "aider-chat"]:
+    elif tool_key == "aider":
         info["name"] = "Aider"
         info["description"] = "Pair programming in your terminal."
         info["env"] = {
@@ -613,24 +637,29 @@ def export_agent_env(tool: str, target_file: Optional[str] = None) -> str:
 
 
 def create_agent_launcher(tool: str) -> str:
-    """Generate an executable bash launcher script for the requested tool."""
-    tool_key = tool.lower().strip()
-    script_name = f"run-{tool_key}.sh"
-    script_path = BASE_DIR / script_name
+    """Return canonical or generate an executable bash launcher script for the requested tool."""
+    tool_key = normalize_tool_name(tool)
 
+    # If canonical script exists in project directory, use it directly
+    canonical = BASE_DIR / f"run-{tool_key}.sh"
+    if canonical.exists():
+        canonical.chmod(0o755)
+        return str(canonical)
+
+    script_path = BASE_DIR / f"run-{tool_key}.sh"
     info = get_agent_connection_info(tool)
     lines = [
         "#!/usr/bin/env bash",
-        f"# ==============================================================================",
-        f"# Launcher for {info['name']} via Antigravity Gemini Proxy",
-        f"# ==============================================================================",
+        "# ==============================================================================",
+        f"# Launcher for {info['name']} via AntiRoute",
+        "# ==============================================================================",
         "set -euo pipefail",
         "",
         'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"',
         "",
         "# Ensure proxy is running",
         'if ! curl -s "http://127.0.0.1:8317/" > /dev/null 2>&1; then',
-        '    echo "Antigravity Proxy is not running. Starting proxy first..."',
+        '    echo "AntiRoute is not running. Starting proxy first..."',
         '    "${SCRIPT_DIR}/start-proxy.sh"',
         "fi",
         "",
@@ -640,37 +669,60 @@ def create_agent_launcher(tool: str) -> str:
         lines.append(f'export {k}="{v}"')
 
     lines.append("")
-    lines.append(f'echo "Starting {info["name"]} connected to Antigravity Proxy..."')
+    lines.append(f'echo "Starting {info["name"]} connected to AntiRoute..."')
 
-    if tool_key in ["opencode", "open-code"]:
-        lines.append('if command -v opencode >/dev/null 2>&1; then')
-        lines.append('    exec opencode "$@"')
-        lines.append('elif command -v npx >/dev/null 2>&1; then')
-        lines.append('    exec npx opencode "$@"')
+    if tool_key == "claude":
+        lines.append('CLAUDE_BIN="$(command -v claude 2>/dev/null || echo "")"')
+        lines.append('if [[ -z "${CLAUDE_BIN}" ]]; then')
+        lines.append('    if [[ -x "${HOME}/.npm-global/bin/claude" ]]; then')
+        lines.append('        CLAUDE_BIN="${HOME}/.npm-global/bin/claude"')
+        lines.append('    fi')
+        lines.append('fi')
+        lines.append('if [[ -n "${CLAUDE_BIN}" ]]; then')
+        lines.append('    exec "${CLAUDE_BIN}" "$@"')
         lines.append('else')
-        lines.append('    echo "Error: opencode command not found. Install it via: npm i -g opencode"')
+        lines.append('    echo "Error: claude CLI not found. Install via: npm i -g @anthropic-ai/claude-code"')
         lines.append('    exit 1')
         lines.append('fi')
-    elif tool_key in ["hermes", "hermes-agent"]:
+    elif tool_key == "opencode":
+        lines.append('if command -v opencode >/dev/null 2>&1; then')
+        lines.append('    exec opencode -m "antigravity/gemini-3.8-flash-high" "$@"')
+        lines.append('elif [[ -x "${HOME}/.opencode/bin/opencode" ]]; then')
+        lines.append('    exec "${HOME}/.opencode/bin/opencode" -m "antigravity/gemini-3.8-flash-high" "$@"')
+        lines.append('else')
+        lines.append('    echo "Error: opencode command not found."')
+        lines.append('    exit 1')
+        lines.append('fi')
+    elif tool_key == "hermes":
         lines.append('if command -v hermes >/dev/null 2>&1; then')
         lines.append('    exec hermes "$@"')
         lines.append('else')
         lines.append('    echo "Error: hermes command not found."')
-        lines.append('    echo "Make sure hermes is installed in your python environment (e.g. pip install hermes-agent)"')
         lines.append('    exit 1')
         lines.append('fi')
-    elif tool_key in ["aider"]:
+    elif tool_key == "aider":
         lines.append('if command -v aider >/dev/null 2>&1; then')
         lines.append('    exec aider --openai-api-base "http://127.0.0.1:8317/v1" --openai-api-key "sk-antigravity-claude" --model openai/gemini-3.8-flash-high "$@"')
         lines.append('else')
-        lines.append('    echo "Error: aider command not found. Install via: pip install aider-chat"')
+        lines.append('    echo "Error: aider command not found."')
+        lines.append('    exit 1')
+        lines.append('fi')
+    elif tool_key == "goose":
+        lines.append('if command -v goose >/dev/null 2>&1; then')
+        lines.append('    exec goose session "$@"')
+        lines.append('else')
+        lines.append('    echo "Error: goose command not found."')
+        lines.append('    exit 1')
+        lines.append('fi')
+    elif tool_key == "droid":
+        lines.append('if command -v droid >/dev/null 2>&1; then')
+        lines.append('    exec droid "$@"')
+        lines.append('else')
+        lines.append('    echo "Error: droid command not found."')
         lines.append('    exit 1')
         lines.append('fi')
     else:
-        lines.append('echo "Configured environment variables:"')
-        for k in info["env"]:
-            lines.append(f'echo "  {k}=${k}"')
-        lines.append('echo "Ready to launch your agent."')
+        lines.append('echo "Configured environment variables for " + info["name"]')
 
     script_path.write_text("\n".join(lines))
     script_path.chmod(0o755)

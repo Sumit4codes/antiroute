@@ -375,14 +375,15 @@ class TUIApp:
         self.refresh_state(force=True)
 
     def action_launch_agent(self, tool: str):
-        """Ensure launcher exists and give instructions or launch."""
+        """Ensure launcher exists and launch in clean terminal mode."""
         launcher = pm.create_agent_launcher(tool)
         curses.endwin()
+        os.system("stty sane 2>/dev/null || true")
         print("\n" + "=" * 64)
-        print(f" Launching / Connecting: {tool}")
+        print(f" ✦ AntiRoute: Launching {tool} ✦")
         print("=" * 64)
-        print(f"Generated launcher: {launcher}")
-        print("\nRunning launcher now...")
+        print(f"Launcher: {launcher}")
+        print("\nStarting now (Ctrl+C or exit agent to return)...")
         print("-" * 64)
         try:
             subprocess.run([launcher])
@@ -391,9 +392,14 @@ class TUIApp:
         except Exception as e:
             print(f"\nExecution error: {e}")
         print("-" * 64)
-        print("Press Enter to return to TUI...")
-        input()
+        print("Press Enter to return to AntiRoute TUI...")
+        try:
+            input()
+        except (KeyboardInterrupt, EOFError):
+            pass
+        os.system("stty sane 2>/dev/null || true")
         self.setup_curses()
+        self.stdscr.clear()
         self.refresh_state(force=True)
 
     # --------------------------------------------------------------------------

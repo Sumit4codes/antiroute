@@ -1,0 +1,30 @@
+# ==============================================================================
+# AntiRoute - Git Ignore
+# ==============================================================================
+
+# Antigravity Google OAuth Tokens & Credentials (CRITICAL - NEVER COMMIT)
+.auth/
+*.token
+*.auth.json
+
+# Local Environment Variables
+.env*
+!.env.example
+
+# Process & Runtime Logs
+proxy.pid
+proxy.log
+*.pid
+*.log
+
+# Python Cache & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# System files
+.DS_Store
+Thumbs.db

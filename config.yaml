@@ -1,0 +1,35 @@
+host: "127.0.0.1"
+port: 8317
+api-keys:
+  - "sk-antigravity-claude"
+remote-management:
+  allow-remote: false
+  secret-key: "$2a$10$u2Toca6dCTzAXqJtBqL09O.LreUcrU4T1kFYHOxVh4.oZXt3gmMde"
+oauth:
+  auth-dir: "/home/sumit/Desktop/gemini_claude/.auth"
+  model-alias:
+    antigravity:
+      - name: "gemini-3.8-flash-high"
+        alias: "gemini-3.1-pro-preview"
+        fork: true
+        force-mapping: true
+      - name: "gemini-3.8-flash-high"
+        alias: "gemini-pro"
+        fork: true
+        force-mapping: true
+      - name: "gemini-3.8-flash-high"
+        alias: "claude-3-7-sonnet-20250219"
+        fork: true
+        force-mapping: true
+      - name: "gemini-3.8-flash-high"
+        alias: "claude-3-5-sonnet-20241022"
+        fork: true
+        force-mapping: true
+      - name: "gemini-3.8-flash-high"
+        alias: "claude-3-5-sonnet-latest"
+        fork: true
+        force-mapping: true
+      - name: "gemini-3.8-flash-high"
+        alias: "claude-3-5-haiku-20241022"
+        fork: true
+        force-mapping: true

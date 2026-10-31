@@ -771,6 +771,9 @@ def run_cli_commands():
 
     subparsers.add_parser("mobile", help="Launch Mobile Gateway & display QR code for smartphone")
 
+    tunnel_parser = subparsers.add_parser("tunnel", help="Manage public HTTPS tunnel for mobile / remote access")
+    tunnel_parser.add_argument("action", nargs="?", choices=["start", "stop", "status"], default="start", help="Tunnel action (default: start)")
+
     conn_parser = subparsers.add_parser("connect", help="Get connection parameters for an agent tool")
     conn_parser.add_argument("tool", nargs="?", choices=["mobile", "opencode", "hermes", "claude", "aider", "cline", "continue", "goose", "droid"], default=None, help="Tool name")
     conn_parser.add_argument("--export", action="store_true", help="Export to a .env file")
@@ -844,6 +847,26 @@ def run_cli_commands():
         print(f"3. Mobile Setup & Siri Guide:")
         print(f"   👉 {mobile_url}/setup")
         print("==================================================================")
+
+    elif args.command == "tunnel":
+        script_dir = Path(__file__).resolve().parent
+        if args.action == "stop":
+            subprocess.run([str(script_dir / "stop-tunnel.sh")])
+        elif args.action == "status":
+            url_file = script_dir / "tunnel.url"
+            pid_file = script_dir / "tunnel.pid"
+            if pid_file.exists() and url_file.exists():
+                try:
+                    pid = int(pid_file.read_text().strip())
+                    os.kill(pid, 0)
+                    print(f"HTTPS Tunnel: RUNNING (PID {pid})")
+                    print(f"URL:          {url_file.read_text().strip()}")
+                except OSError:
+                    print("HTTPS Tunnel: STOPPED (stale PID)")
+            else:
+                print("HTTPS Tunnel: STOPPED")
+        else:
+            subprocess.run([str(script_dir / "run-tunnel.sh")])
 
     elif args.command == "connect":
         if not args.tool:

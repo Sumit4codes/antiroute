@@ -15,6 +15,11 @@ done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Check for stop argument
+if [[ "${1:-}" == "stop" || "${1:-}" == "--stop" || "${1:-}" == "-k" ]]; then
+    exec "${SCRIPT_DIR}/stop-tunnel.sh"
+fi
+
 TUNNEL_PID_FILE="${SCRIPT_DIR}/tunnel.pid"
 TUNNEL_LOG_FILE="${SCRIPT_DIR}/tunnel.log"
 TUNNEL_URL_FILE="${SCRIPT_DIR}/tunnel.url"

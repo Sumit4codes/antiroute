@@ -105,6 +105,7 @@ AntiRoute translates requests on `http://127.0.0.1:8317`. Choose your preferred 
 
 | Agent | Protocol | One-Click Launcher | Manual Command |
 |---|---|---|---|
+| **Smartphone / Mobile (PWA & Chatbox)** | OpenAI / Web PWA | `antiroute-mobile` | `http://<LAN_IP>:8318` or `http://<LAN_IP>:8317/v1` |
 | **OpenCode** | OpenAI / Anthropic | `antiroute-opencode` | `opencode -m antigravity/gemini-3.8-flash-high` |
 | **Hermes Agent** | OpenAI | `antiroute-hermes` | `export OPENAI_BASE_URL="http://127.0.0.1:8317/v1" && hermes` |
 | **Claude Code CLI** | Anthropic | `antiroute-claude` | `export ANTHROPIC_BASE_URL="http://127.0.0.1:8317" && claude` |
@@ -176,6 +177,66 @@ print(response.choices[0].message.content)
 
 ---
 
+## 📱 Smartphone & Mobile API ("Talk with Gemini")
+
+AntiRoute enables talking with Gemini models (**Gemini 3.8 Flash High**, **Gemini 3.1 Pro Preview**) straight from your iPhone or Android smartphone over your local Wi-Fi, personal hotspot, or Tailscale network.
+
+Launch the Mobile Gateway anytime:
+```bash
+antiroute mobile
+# or
+antiroute-mobile
+```
+*This starts the mobile companion service and displays a scanable ASCII QR code in your terminal.*
+
+### 1. Instant Mobile Web Chat (PWA with Voice Talk)
+Scan the terminal QR code or open in your phone's browser (Safari or Chrome):
+```text
+http://<YOUR_LAN_IP>:8318
+```
+* 🎙️ **Voice Talk Mode**: Tap the mic button to speak questions aloud (HTML5 Web Speech API).
+* 🔊 **Audio Readout (TTS)**: Gemini reads answers back to you with speech synthesis.
+* ⚡ **Live SSE Streaming**: Answers stream in real-time token-by-token.
+* 📲 **Install as Native App**:
+  * **iPhone (Safari)**: Tap Share `[↑]` &rarr; Scroll down &rarr; **Add to Home Screen**.
+  * **Android (Chrome)**: Tap `[⋮]` &rarr; **Add to Home screen** or **Install app**.
+* 🎨 **Mobile Dark Mode**: OLED aesthetics, glassmorphism cards, and 1-tap code copy buttons.
+
+---
+
+### 2. Connect Mobile Apps: Chatbox (iOS & Android)
+If you prefer a native third-party mobile app, **Chatbox** (free on iOS App Store and Google Play) connects directly:
+1. Open **Chatbox** &rarr; **Settings** &rarr; **Model Provider**.
+2. Select **OpenAI API**.
+3. Configure:
+   * **API Host / Base URL**: `http://<YOUR_LAN_IP>:8317/v1` (or `http://<YOUR_LAN_IP>:8318/v1`)
+   * **API Key**: `sk-antigravity-claude`
+   * **Model**: `gemini-3.8-flash-high` or `gemini-3.1-pro-preview`
+
+---
+
+### 3. Apple Shortcuts (Siri Hands-Free on iPhone)
+Talk to Gemini using Siri (*"Hey Siri, Ask Gemini"*):
+1. In the iOS **Shortcuts** app, create a new shortcut named **Ask Gemini**.
+2. Add action **Dictate Text** (or *Ask for Input*).
+3. Add action **Get Contents of URL**:
+   * **URL**: `http://<YOUR_LAN_IP>:8317/v1/chat/completions`
+   * **Method**: `POST`
+   * **Headers**:
+     * `Authorization: Bearer sk-antigravity-claude`
+     * `Content-Type: application/json`
+   * **Request Body (JSON)**:
+     ```json
+     {
+       "model": "gemini-3.8-flash-high",
+       "messages": [{"role": "user", "content": "(Dictated Text)"}]
+     }
+     ```
+4. Add action **Get Dictionary Value** for `choices.1.message.content`.
+5. Add action **Speak Text** to hear Gemini reply.
+
+---
+
 ## 🛠️ Interactive TUI Controls
 
 Run `antiroute` to enter the interactive terminal cockpit:
@@ -232,45 +293,45 @@ antiroute restart
 ## 🏗️ Architecture
 
 ```
-┌────────────────────────────────────────────────────────┐
-│  AI Coding Agents: Claude Code / Hermes / OpenCode...  │
-└───────────────────────────┬────────────────────────────┘
-                            │ Anthropic (/v1/messages)
-                            │ or OpenAI (/v1/chat/completions)
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│                  AntiRoute (Port 8317)                 │
-│         Translates schemas to Gemini protocols         │
-└───────────────────────────┬────────────────────────────┘
-                            │ Antigravity OAuth Tokens (.auth/)
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│                  Google Antigravity                    │
-│      Gemini 3.8 Flash High / Gemini 3.1 Pro Models     │
-└────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────┐     ┌──────────────────────────────────────┐
+│  AI Agents (Claude / Hermes / etc.)  │     │ Smartphone (PWA / Chatbox / Siri)    │
+└──────────────────┬───────────────────┘     └──────────────────┬───────────────────┘
+                   │ /v1/chat/completions                       │ Port 8318 (PWA / Voice)
+                   │ /v1/messages (Port 8317)                   │ or Port 8317 (OpenAI API)
+                   ▼                                            ▼
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│                       AntiRoute Gateway & Mobile Cockpit                          │
+│               Translates OpenAI / Anthropic schemas to Gemini protocols            │
+└─────────────────────────────────────────┬─────────────────────────────────────────┘
+                                          │ Antigravity OAuth Tokens (.auth/)
+                                          ▼
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│                                Google Antigravity                                 │
+│                   Gemini 3.8 Flash High / Gemini 3.1 Pro Models                   │
+└───────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## ⚙️ Background Daemon (systemd)
 
-To run AntiRoute as an automatic background service that starts on boot:
+To run AntiRoute core and mobile services as background daemons that start on boot:
 
 ```bash
-# Install user service
+# Install user services
 ./setup-systemd.sh install
 
 # Enable on boot
-systemctl --user enable antiroute
+systemctl --user enable antiroute antiroute-mobile
 
-# Start daemon
-systemctl --user start antiroute
+# Start daemons
+systemctl --user start antiroute antiroute-mobile
 
 # Inspect status
-systemctl --user status antiroute
+systemctl --user status antiroute antiroute-mobile
 
-# Stop daemon
-systemctl --user stop antiroute
+# Stop daemons
+systemctl --user stop antiroute antiroute-mobile
 ```
 
 ---

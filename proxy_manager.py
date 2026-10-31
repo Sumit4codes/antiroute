@@ -21,10 +21,81 @@ PID_PATH = BASE_DIR / "proxy.pid"
 LOG_PATH = BASE_DIR / "proxy.log"
 AUTH_DIR = BASE_DIR / ".auth"
 BINARY_PATH = BASE_DIR / "cli-proxy-api"
+MOBILE_PID_PATH = BASE_DIR / "mobile.pid"
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8317
+DEFAULT_MOBILE_PORT = 8318
 DEFAULT_API_KEY = "sk-antigravity-claude"
+
+
+def get_lan_ips() -> List[Tuple[str, str]]:
+    """Detect LAN and interface IP addresses for smartphone connection."""
+    ips = []
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            ips.append(("Wi-Fi / LAN", s.getsockname()[0]))
+    except Exception:
+        pass
+
+    try:
+        res = subprocess.run(["hostname", "-I"], capture_output=True, text=True, timeout=2)
+        for raw_ip in res.stdout.strip().split():
+            ip = raw_ip.strip()
+            if ip and not ip.startswith("127.") and ":" not in ip:
+                if not any(ip == existing[1] for existing in ips):
+                    label = "Hotspot / Network" if ip.startswith("192.168.43.") or ip.startswith("172.") else "Interface"
+                    ips.append((label, ip))
+    except Exception:
+        pass
+
+    if not ips:
+        ips.append(("Local", "127.0.0.1"))
+    return ips
+
+
+def get_primary_ip() -> str:
+    """Return the primary LAN IP or 127.0.0.1."""
+    lan_ips = get_lan_ips()
+    return lan_ips[0][1] if lan_ips else "127.0.0.1"
+
+
+def get_mobile_pid() -> Optional[int]:
+    """Return running mobile server PID if process is alive, else None."""
+    if MOBILE_PID_PATH.exists():
+        try:
+            pid = int(MOBILE_PID_PATH.read_text().strip())
+            os.kill(pid, 0)
+            return pid
+        except (ValueError, OSError):
+            pass
+
+    try:
+        res = subprocess.run(["pgrep", "-f", "mobile_server.py"], capture_output=True, text=True)
+        if res.returncode == 0 and res.stdout.strip():
+            pids = [int(p) for p in res.stdout.strip().splitlines() if p.isdigit()]
+            if pids:
+                return pids[0]
+    except Exception:
+        pass
+    return None
+
+
+def check_mobile_health(port: int = DEFAULT_MOBILE_PORT) -> Tuple[bool, str, float]:
+    """Check mobile server health on http://127.0.0.1:{port}/api/status."""
+    url = f"http://127.0.0.1:{port}/api/status"
+    start = time.time()
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Antigravity-Mobile-Check"})
+        with urllib.request.urlopen(req, timeout=2.0) as resp:
+            latency = (time.time() - start) * 1000
+            data = resp.read().decode("utf-8")
+            js = json.loads(data)
+            return True, js.get("status", "OK"), latency
+    except Exception as e:
+        latency = (time.time() - start) * 1000
+        return False, str(e), latency
 
 
 def get_proxy_pid() -> Optional[int]:
@@ -328,6 +399,8 @@ def update_default_target_model(new_model: str) -> Tuple[bool, str]:
 def normalize_tool_name(tool: str) -> str:
     """Normalize any tool display name to standard slug."""
     k = tool.lower().strip()
+    if any(x in k for x in ["mobile", "phone", "smartphone", "chatbox", "siri", "shortcuts"]):
+        return "mobile"
     if any(x in k for x in ["claude"]):
         return "claude"
     if any(x in k for x in ["opencode", "open-code"]):
@@ -367,7 +440,34 @@ def get_agent_connection_info(tool: str) -> Dict[str, Any]:
         "description": ""
     }
 
-    if tool_key == "opencode":
+    if tool_key == "mobile":
+        primary_ip = get_primary_ip()
+        info["name"] = "Smartphone / Mobile (Chatbox, PWA, Siri)"
+        info["description"] = "Connect your smartphone (iOS/Android) via Web Chat PWA, Chatbox, or Siri Shortcuts."
+        info["env"] = {
+            "MOBILE_CHAT_URL": f"http://{primary_ip}:8318",
+            "MOBILE_SETUP_URL": f"http://{primary_ip}:8318/setup",
+            "OPENAI_BASE_URL": f"http://{primary_ip}:8317/v1",
+            "OPENAI_API_KEY": key,
+            "DEFAULT_MODEL": "gemini-3.8-flash-high"
+        }
+        info["commands"] = [
+            "./run-mobile.sh",
+            "antiroute mobile"
+        ]
+        info["snippet"] = (
+            "# ✦ AntiRoute Smartphone & Mobile Connection ✦\n"
+            f"# 1. Instant Mobile Web Chat (PWA with Voice Talk):\n"
+            f"#    http://{primary_ip}:8318\n\n"
+            f"# 2. Chatbox App (iOS & Android Settings):\n"
+            f"#    API Host: http://{primary_ip}:8317/v1\n"
+            f"#    API Key:  {key}\n"
+            f"#    Model:    gemini-3.8-flash-high\n\n"
+            f"# 3. Open Setup Guide & Terminal QR Code:\n"
+            f"#    antiroute mobile\n"
+        )
+
+    elif tool_key == "opencode":
         info["name"] = "OpenCode"
         info["description"] = "Open-source terminal-based AI coding assistant."
         info["env"] = {

@@ -30,6 +30,7 @@ TABS = [
 
 # Supported Agent Tools for quick connection
 AGENT_TOOLS = [
+    "Smartphone / Mobile",
     "OpenCode",
     "Hermes",
     "Claude Code",
@@ -768,8 +769,10 @@ def run_cli_commands():
     subparsers.add_parser("restart", help="Restart proxy server")
     subparsers.add_parser("test", help="Test Gemini connection via proxy")
 
+    subparsers.add_parser("mobile", help="Launch Mobile Gateway & display QR code for smartphone")
+
     conn_parser = subparsers.add_parser("connect", help="Get connection parameters for an agent tool")
-    conn_parser.add_argument("tool", nargs="?", choices=["opencode", "hermes", "claude", "aider", "cline", "continue", "goose", "droid"], default=None, help="Tool name")
+    conn_parser.add_argument("tool", nargs="?", choices=["mobile", "opencode", "hermes", "claude", "aider", "cline", "continue", "goose", "droid"], default=None, help="Tool name")
     conn_parser.add_argument("--export", action="store_true", help="Export to a .env file")
 
     args = parser.parse_args()
@@ -818,12 +821,36 @@ def run_cli_commands():
         res2 = pm.test_gemini_openai()
         print(f"Result: {res2.get('text')} ({res2.get('latency_ms')}ms)")
 
+    elif args.command == "mobile":
+        # Ensure services are up
+        pm.start_proxy()
+        primary_ip = pm.get_primary_ip()
+        mobile_url = f"http://{primary_ip}:8318"
+        
+        # Print QR Code
+        import mobile_server
+        mobile_server.print_ascii_qr(mobile_url)
+        print("==================================================================")
+        print(" ✦ AntiRoute Mobile Gateway & Web Chat ✦")
+        print("==================================================================")
+        print(f"1. Smartphone Web Chat (PWA with Voice Talk):")
+        print(f"   👉 {mobile_url}")
+        print("")
+        print(f"2. Smartphone Apps (Chatbox, NextChat):")
+        print(f"   • Base URL: http://{primary_ip}:8317/v1 (or {mobile_url}/v1)")
+        print(f"   • API Key:  sk-antigravity-claude")
+        print(f"   • Model:    gemini-3.8-flash-high")
+        print("")
+        print(f"3. Mobile Setup & Siri Guide:")
+        print(f"   👉 {mobile_url}/setup")
+        print("==================================================================")
+
     elif args.command == "connect":
         if not args.tool:
             print("==================================================================")
             print(" Supported Agent Integrations & Quick Connect Commands")
             print("==================================================================")
-            tools_list = ["hermes", "opencode", "claude", "goose", "droid", "aider"]
+            tools_list = ["mobile", "hermes", "opencode", "claude", "goose", "droid", "aider"]
             for t in tools_list:
                 inf = pm.get_agent_connection_info(t)
                 print(f"• {inf['name']}:")

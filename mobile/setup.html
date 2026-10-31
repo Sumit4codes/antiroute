@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>AntiRoute Mobile Gateway & Setup</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <meta name="theme-color" content="#090d16">
+  <style>
+    :root {
+      --bg: #090d16;
+      --bg-surface: #111827;
+      --bg-card: rgba(17, 24, 39, 0.85);
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-grad: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: calc(var(--safe-top) + 20px) 16px calc(var(--safe-bottom) + 30px) 16px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      background: var(--accent-grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .qr-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 12px 0;
+      padding: 16px;
+      background: #ffffff;
+      border-radius: 12px;
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #qrcode-img {
+      width: 180px;
+      height: 180px;
+      display: block;
+    }
+    .qr-label {
+      color: #1e293b;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .code-box {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 13px;
+      position: relative;
+      margin: 8px 0;
+      word-break: break-all;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      background: var(--accent-grad);
+      color: white;
+      text-align: center;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      margin-top: 10px;
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3);
+    }
+    .btn.outline {
+      background: none;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      box-shadow: none;
+    }
+    ol, ul {
+      padding-left: 20px;
+      font-size: 13.5px;
+      color: var(--text);
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      border: 1px solid var(--accent);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="/icon.svg" class="logo" alt="AntiRoute Logo">
+      <h1>AntiRoute Mobile Gateway</h1>
+      <p class="subtitle">Connect your smartphone to Google Antigravity Gemini models</p>
+    </header>
+
+    <!-- Quick Web Launch Card -->
+    <div class="card" style="border-color: rgba(56, 189, 248, 0.4);">
+      <div class="card-title">
+        📱 Instant Web Chat (PWA)
+        <span class="badge">Recommended</span>
+      </div>
+      <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:12px;">
+        Open our built-in mobile chat app in your phone's browser with voice talk mode, streaming responses, and home screen installation:
+      </p>
+      <div class="qr-container">
+        <img id="qrcode-img" src="/api/qr" alt="QR Code">
+        <span class="qr-label">Scan with Phone Camera</span>
+      </div>
+      <a href="/" class="btn">Launch Mobile Chat UI</a>
+    </div>
+
+    <!-- Chatbox App Setup Card -->
+    <div class="card">
+      <div class="card-title">
+        💬 Chatbox App (iOS & Android)
+        <span class="badge">Free App</span>
+      </div>
+      <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:12px;">
+        Chatbox is a free, open-source AI app available on App Store and Google Play that supports custom OpenAI APIs:
+      </p>
+      <ol>
+        <li>Install <strong>Chatbox</strong> from Apple App Store or Google Play Store.</li>
+        <li>Open <strong>Settings</strong> &gt; <strong>Model Provider</strong> &gt; Select <strong>OpenAI API</strong>.</li>
+        <li>Fill in the connection details:</li>
+      </ol>
+      <div class="code-box">
+        <span style="color:#94a3b8;">API Host / Base URL:</span><br>
+        <span id="api-host-val">http://10.166.250.215:8317/v1</span>
+        <button class="copy-btn" onclick="copyValue('api-host-val')">Copy</button>
+      </div>
+      <div class="code-box">
+        <span style="color:#94a3b8;">API Key:</span><br>
+        <span id="api-key-val">sk-antigravity-claude</span>
+        <button class="copy-btn" onclick="copyValue('api-key-val')">Copy</button>
+      </div>
+      <div class="code-box">
+        <span style="color:#94a3b8;">Model ID:</span><br>
+        <span id="model-val">gemini-3.8-flash-high</span>
+        <button class="copy-btn" onclick="copyValue('model-val')">Copy</button>
+      </div>
+    </div>
+
+    <!-- Apple iOS Shortcuts (Siri) -->
+    <div class="card">
+      <div class="card-title">
+        🍎 Apple Shortcuts (iPhone Siri Voice)
+      </div>
+      <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:12px;">
+        Ask Gemini questions hands-free directly using Siri on your iPhone or iPad:
+      </p>
+      <ol>
+        <li>Open the <strong>Shortcuts</strong> app on iOS.</li>
+        <li>Tap <strong>+</strong> to create a new shortcut named <em>"Ask Gemini"</em>.</li>
+        <li>Add action: <strong>Dictate Text</strong> (or <em>Ask for Input</em>).</li>
+        <li>Add action: <strong>Get Contents of URL</strong>:
+          <ul style="margin-top:4px;">
+            <li>URL: <code id="siri-url">http://10.166.250.215:8317/v1/chat/completions</code></li>
+            <li>Method: <code>POST</code></li>
+            <li>Headers: <code>Authorization: Bearer sk-antigravity-claude</code>, <code>Content-Type: application/json</code></li>
+            <li>Request Body (JSON): <code>{"model":"gemini-3.8-flash-high", "messages":[{"role":"user","content":"(Dictated Text)"}]}</code></li>
+          </ul>
+        </li>
+        <li>Add action: <strong>Get Dictionary Value</strong>: <code>choices.1.message.content</code>.</li>
+        <li>Add action: <strong>Speak Text</strong> (to hear Gemini reply).</li>
+      </ol>
+      <p style="font-size:12.5px;color:var(--accent);margin-top:10px;">
+        Now say: <em>"Hey Siri, Ask Gemini"</em> from anywhere on your phone!
+      </p>
+    </div>
+
+    <!-- cURL / API Testing Card -->
+    <div class="card">
+      <div class="card-title">
+        ⚡ Direct API cURL Snippet
+      </div>
+      <div class="code-box" style="white-space: pre-wrap; font-size: 11.5px;">curl -X POST "<span class="base-url-text">http://10.166.250.215:8317</span>/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-antigravity-claude" \
+  -d '{
+    "model": "gemini-3.8-flash-high",
+    "messages": [{"role": "user", "content": "Hello Gemini!"}]
+  }'<button class="copy-btn" onclick="copyCurl()">Copy</button></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Copied to clipboard!</div>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const origin = window.location.origin;
+      const host = window.location.hostname;
+      // Update dynamic host display
+      document.getElementById('api-host-val').textContent = `${origin}/v1`;
+      document.getElementById('siri-url').textContent = `${origin}/v1/chat/completions`;
+      document.querySelectorAll('.base-url-text').forEach(el => el.textContent = origin);
+    });
+
+    function copyValue(id) {
+      const txt = document.getElementById(id).innerText;
+      copyText(txt);
+    }
+
+    function copyCurl() {
+      const origin = window.location.origin;
+      const cmd = `curl -X POST "${origin}/v1/chat/completions" \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer sk-antigravity-claude" \\\n  -d '{\n    "model": "gemini-3.8-flash-high",\n    "messages": [{"role": "user", "content": "Hello Gemini!"}]\n  }'`;
+      copyText(cmd);
+    }
+
+    function copyText(txt) {
+      navigator.clipboard.writeText(txt).then(() => {
+        const toast = document.getElementById('toast');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+      });
+    }
+  </script>
+</body>
+</html>

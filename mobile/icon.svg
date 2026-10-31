@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#090d16" />
+    </linearGradient>
+    <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#c084fc" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+  <rect width="504" height="504" x="4" y="4" rx="124" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="4" />
+  <!-- Gemini / Antigravity 4-pointed Star -->
+  <g filter="url(#glow)">
+    <path d="M256 64 C256 160, 280 230, 448 256 C280 282, 256 352, 256 448 C256 352, 232 282, 64 256 C232 230, 256 160, 256 64 Z" fill="url(#starGrad)" />
+  </g>
+  <!-- Inner core highlight -->
+  <circle cx="256" cy="256" r="32" fill="#ffffff" opacity="0.9" filter="url(#glow)" />
+  <!-- Orbit dots -->
+  <circle cx="340" cy="180" r="10" fill="#38bdf8" opacity="0.8" />
+  <circle cx="172" cy="332" r="8" fill="#c084fc" opacity="0.8" />
+</svg>

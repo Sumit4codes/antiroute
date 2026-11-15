@@ -6,6 +6,10 @@ Unit and integration tests for AntiRoute Mobile Gateway & Smartphone API
 import os
 import sys
 import json
+import time
+import socket
+import threading
+import http.server
 import unittest
 import urllib.request
 from pathlib import Path
@@ -17,7 +21,77 @@ import proxy_manager as pm
 import mobile_server
 
 
+def is_port_open(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.3)
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
+
+class MockProxyHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path in ("/", "/health"):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"CLI Proxy API Server")
+        elif self.path.startswith("/v1/models"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            payload = {
+                "object": "list",
+                "data": [
+                    {"id": "gemini-3.8-flash-high", "object": "model"},
+                    {"id": "gemini-3.1-pro-preview", "object": "model"}
+                ]
+            }
+            self.wfile.write(json.dumps(payload).encode("utf-8"))
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_POST(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(b'{"choices": [{"message": {"content": "ok"}}]}')
+
+    def log_message(self, format, *args):
+        pass  # Quiet during tests
+
+
 class TestMobileGateway(unittest.TestCase):
+    _proxy_server = None
+    _mobile_server = None
+
+    @classmethod
+    def setUpClass(cls):
+        # 1. Start mock proxy on 8317 if not already running
+        if not is_port_open(8317):
+            cls._proxy_server = http.server.HTTPServer(("127.0.0.1", 8317), MockProxyHandler)
+            t_proxy = threading.Thread(target=cls._proxy_server.serve_forever, daemon=True)
+            t_proxy.start()
+
+        # 2. Start mobile server on 8318 if not already running
+        if not is_port_open(8318):
+            cls._mobile_server = http.server.ThreadingHTTPServer(("127.0.0.1", 8318), mobile_server.MobileRequestHandler)
+            t_mobile = threading.Thread(target=cls._mobile_server.serve_forever, daemon=True)
+            t_mobile.start()
+
+        # Wait up to 3 seconds for ports to become ready
+        for _ in range(30):
+            if is_port_open(8318):
+                break
+            time.sleep(0.1)
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls._mobile_server:
+            cls._mobile_server.shutdown()
+            cls._mobile_server.server_close()
+        if cls._proxy_server:
+            cls._proxy_server.shutdown()
+            cls._proxy_server.server_close()
     def test_lan_ips_detection(self):
         ips = pm.get_lan_ips()
         self.assertIsInstance(ips, list)

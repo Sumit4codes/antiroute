@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import time
+import base64
 import signal
 import socket
 import secrets
@@ -347,17 +348,20 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
             buf = io.BytesIO()
             img.save(buf, format="PNG")
             png_bytes = buf.getvalue()
+        except Exception:
+            # Fallback 1x1 PNG image if qrcode or PIL is not installed
+            png_bytes = base64.b64decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+            )
 
-            self.send_response(200)
-            self.send_cors_headers()
-            self.send_header("Content-Type", "image/png")
-            self.send_header("Content-Length", str(len(png_bytes)))
-            self.send_header("Cache-Control", "private, no-cache")
-            self.end_headers()
-            if self.command != "HEAD":
-                self.wfile.write(png_bytes)
-        except Exception as e:
-            self.send_error_response(500, f"QR Error: {e}", content_type="text/plain; charset=utf-8")
+        self.send_response(200)
+        self.send_cors_headers()
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Length", str(len(png_bytes)))
+        self.send_header("Cache-Control", "private, no-cache")
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(png_bytes)
 
     def proxy_request(self, method: str):
         """Proxy incoming request to cli-proxy-api with real-time SSE streaming support."""

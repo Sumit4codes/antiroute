@@ -37,20 +37,27 @@ fi
 
 # Ensure core proxy is running
 if ! curl -s http://127.0.0.1:8317/ >/dev/null 2>&1; then
-    echo "Starting AntiRoute proxy..."
+    echo "Starting AntiRoute core proxy..."
     systemctl --user start antiroute 2>/dev/null || ./start-proxy.sh >/dev/null 2>&1 || true
+    sleep 2
+fi
+
+# Ensure mobile server is running
+if ! curl -s http://127.0.0.1:8318/api/status >/dev/null 2>&1; then
+    echo "Starting AntiRoute mobile gateway..."
+    systemctl --user start antiroute-mobile 2>/dev/null || ./run-mobile.sh >/dev/null 2>&1 || true
     sleep 2
 fi
 
 echo "Launching secure HTTPS tunnel via SSH..."
 > "${TUNNEL_LOG_FILE}"
 
-# Start Pinggy SSH tunnel in background
+# Start Pinggy SSH tunnel in background forwarding port 8318 (Mobile Web Chat + /v1 proxy)
 nohup ssh -o StrictHostKeyChecking=no \
           -o ServerAliveInterval=30 \
           -o ServerAliveCountMax=3 \
           -o ExitOnForwardFailure=yes \
-          -p 443 -R0:localhost:8317 a.pinggy.io \
+          -p 443 -R0:localhost:8318 a.pinggy.io \
           > "${TUNNEL_LOG_FILE}" 2>&1 &
 
 TUNNEL_PID=$!
@@ -76,24 +83,25 @@ if [[ -z "${HTTPS_URL}" ]]; then
     exit 1
 fi
 
+TOKEN="$(python3 -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); import mobile_server; print(mobile_server.get_or_create_mobile_token())")"
+WEB_CHAT_URL="${HTTPS_URL}/?token=${TOKEN}"
+
 echo ""
 echo "=================================================================="
 echo " ✦ AntiRoute Secure HTTPS Tunnel Active ✦"
 echo "=================================================================="
-echo "• HTTPS Base URL:     ${HTTPS_URL}/v1"
-echo "• Chat Completions:   ${HTTPS_URL}/v1/chat/completions"
-echo "• Models Catalog:     ${HTTPS_URL}/v1/models"
-echo "• API Key:            sk-antigravity-claude"
-echo "• Model:              gemini-3.8-flash-high"
+echo "• 📱 Smartphone Web Chat: ${WEB_CHAT_URL}"
+echo "• 🌐 HTTPS API Endpoint:  ${HTTPS_URL}/v1"
+echo "• 🔑 Access Token:        ${TOKEN}"
+echo "• 📖 Mobile Setup Guide:  ${HTTPS_URL}/setup?token=${TOKEN}"
+echo "• 🤖 Default Model:       gemini-3.8-flash-high"
 echo "=================================================================="
 echo ""
-echo "📱 Configuration for Koda Dev (code_agent) Android App:"
-echo "   1. Base URL / API Host: ${HTTPS_URL}/v1"
-echo "   2. API Key:             sk-antigravity-claude"
-echo "   3. Model:               gemini-3.8-flash-high"
-echo ""
-echo "✔ Using HTTPS avoids Android's 'cleartext HTTP traffic not permitted' error!"
+echo "📱 Smartphone Instructions:"
+echo "   1. Scan the QR code below or open the Web Chat URL in Safari / Chrome"
+echo "   2. Works on any network: Local Wi-Fi, 4G/5G Cellular, or Public Hotspots"
+echo "   3. Full Voice Talk & TTS Audio supported over secure HTTPS"
 echo "=================================================================="
 
-# Optional ASCII QR Code
-python3 -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); import mobile_server; mobile_server.print_ascii_qr('${HTTPS_URL}')" 2>/dev/null || true
+# Print ASCII QR Code for Web Chat
+python3 -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); import mobile_server; mobile_server.print_ascii_qr('${WEB_CHAT_URL}')" 2>/dev/null || true

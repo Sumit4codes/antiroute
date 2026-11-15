@@ -122,9 +122,9 @@ class TestMobileGateway(unittest.TestCase):
         mode = token_path.stat().st_mode & 0o777
         self.assertEqual(mode, 0o600)
 
-    def test_default_host_is_localhost(self):
-        """Security: Verify default host interface binds to localhost (127.0.0.1)."""
-        self.assertEqual(mobile_server.DEFAULT_HOST, "127.0.0.1")
+    def test_default_host_is_all_interfaces(self):
+        """Verify default host interface binds to 0.0.0.0 so smartphones on LAN can connect."""
+        self.assertEqual(mobile_server.DEFAULT_HOST, "0.0.0.0")
 
     def test_mobile_server_qr_endpoint(self):
         url = "http://127.0.0.1:8318/api/qr"

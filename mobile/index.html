@@ -204,56 +204,184 @@
       border-bottom-left-radius: 4px;
     }
 
-    .bubble p:not(:last-child) {
-      margin-bottom: 8px;
+    .bubble p {
+      margin: 0 0 8px 0;
     }
 
-    .bubble code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    .bubble p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Headings */
+    .bubble h1, .bubble h2, .bubble h3, .bubble h4 {
+      font-weight: 700;
+      color: #ffffff;
+      margin: 12px 0 6px 0;
+      line-height: 1.35;
+    }
+
+    .bubble h1:first-child, .bubble h2:first-child, .bubble h3:first-child, .bubble h4:first-child {
+      margin-top: 0;
+    }
+
+    .bubble h1 { font-size: 16.5px; }
+    .bubble h2 { font-size: 15.5px; }
+    .bubble h3 { font-size: 14.5px; }
+    .bubble h4 { font-size: 13.5px; }
+
+    /* Blockquotes */
+    .bubble blockquote {
+      margin: 10px 0;
+      padding: 8px 12px;
+      border-left: 3px solid var(--accent);
+      background: rgba(56, 189, 248, 0.07);
+      border-radius: 0 8px 8px 0;
+      color: #cbd5e1;
+    }
+
+    .bubble blockquote p {
+      margin: 0;
+      font-style: normal;
+    }
+
+    /* Lists */
+    .bubble ul, .bubble ol {
+      margin: 6px 0 8px 20px;
+      padding: 0;
+    }
+
+    .bubble li {
+      margin-bottom: 3px;
+      line-height: 1.5;
+    }
+
+    .bubble li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Links */
+    .bubble a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      word-break: break-all;
+    }
+
+    .bubble a:hover {
+      opacity: 0.85;
+    }
+
+    /* Horizontal Rules */
+    .bubble hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 12px 0;
+    }
+
+    /* Inline Code */
+    .bubble :not(pre) > code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       font-size: 12.5px;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 2px 5px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #38bdf8;
+      padding: 2px 6px;
       border-radius: 4px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      word-break: break-word;
     }
 
+    /* Code Block Containers */
     .code-block-wrapper {
       position: relative;
       margin: 10px 0;
       border-radius: 10px;
       overflow: hidden;
-      border: 1px solid var(--border);
-      background: #0d1117;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #090d16;
     }
 
     .code-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       padding: 6px 12px;
       font-size: 11px;
       color: var(--text-muted);
       font-weight: 600;
+      letter-spacing: 0.5px;
       text-transform: uppercase;
+      user-select: none;
     }
 
     .copy-btn {
-      background: none;
-      border: none;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       color: var(--accent);
       font-size: 11px;
+      font-weight: 500;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .copy-btn:active {
+      background: rgba(56, 189, 248, 0.2);
     }
 
     .code-block-wrapper pre {
+      margin: 0;
       padding: 12px;
       overflow-x: auto;
-      font-size: 12px;
+      font-size: 12.5px;
       line-height: 1.5;
+      background: transparent;
+      border: none;
+    }
+
+    .code-block-wrapper pre code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: #e2e8f0;
+      font-size: inherit;
+      white-space: pre;
+    }
+
+    /* Tables */
+    .table-wrapper {
+      margin: 10px 0;
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .bubble table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .bubble th, .bubble td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bubble th {
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .bubble tr:last-child td {
+      border-bottom: none;
     }
 
     .message-meta {
@@ -994,53 +1122,244 @@
     // Markdown Parser
     function renderMarkdown(raw) {
       if (!raw) return '';
-      let text = raw
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
 
-      // Code blocks ```lang\ncode\n```
-      text = text.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
-        const id = 'code-' + Math.random().toString(36).substr(2, 9);
-        return `
+      // 1. Auto-close unclosed code block during streaming
+      let text = raw;
+      const fenceMatches = text.match(/```/g) || [];
+      if (fenceMatches.length % 2 === 1) {
+        text += '\n```';
+      }
+
+      // 2. Extract code blocks into placeholders
+      const codeBlocks = [];
+      text = text.replace(/```([a-zA-Z0-9_\-\+\#]*)[ \t]*\n?([\s\S]*?)```/g, (match, lang, code) => {
+        const id = 'code-' + Math.random().toString(36).substring(2, 9);
+        const cleanLang = (lang || '').trim();
+        const displayLang = cleanLang ? cleanLang.toUpperCase() : 'CODE';
+        const cleanCode = code.replace(/\n$/, '');
+        const escapedCode = cleanCode
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+
+        const html = `
           <div class="code-block-wrapper">
             <div class="code-header">
-              <span>${lang || 'CODE'}</span>
-              <button class="copy-btn" onclick="copyCodeBlock('${id}')">
+              <span>${displayLang}</span>
+              <button class="copy-btn" onclick="copyCodeBlock('${id}', this)">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </svg> Copy
               </button>
             </div>
-            <pre><code id="${id}">${code}</code></pre>
+            <pre><code id="${id}">${escapedCode}</code></pre>
           </div>
         `;
+
+        const placeholder = `\x00CODEBLOCK_${codeBlocks.length}\x00`;
+        codeBlocks.push(html);
+        return '\n\n' + placeholder + '\n\n';
       });
 
-      // Inline code `code`
-      text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+      // Inline Markdown Parser
+      function parseInline(str) {
+        let s = str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
 
-      // Bold & Italics
-      text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-      text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        // Inline code `code`
+        s = s.replace(/`([^`]+)`/g, (m, c) => `<code>${c}</code>`);
+        // Bold **text** or __text__
+        s = s.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
+        // Italic *text* or _text_
+        s = s.replace(/(\*|_)(.*?)\1/g, '<em>$2</em>');
+        // Strikethrough ~~text~~
+        s = s.replace(/~~(.*?)~~/g, '<del>$1</del>');
+        // Links [text](url) - only http/https/relative
+        s = s.replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^\s\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
 
-      // Paragraphs
-      const paragraphs = text.split(/\n\n+/);
-      return paragraphs.map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+        return s;
+      }
+
+      // 3. Process line-by-line block structures
+      const lines = text.split('\n');
+      const resultBlocks = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        const line = lines[i];
+
+        // Code block placeholder
+        if (line.trim().startsWith('\x00CODEBLOCK_')) {
+          resultBlocks.push(line.trim());
+          i++;
+          continue;
+        }
+
+        // Blank line
+        if (!line.trim()) {
+          i++;
+          continue;
+        }
+
+        // Horizontal Rule: --- or *** or ___
+        if (/^(\-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
+          resultBlocks.push('<hr>');
+          i++;
+          continue;
+        }
+
+        // Headings: #, ##, ###, ####
+        const headerMatch = line.match(/^(#{1,4})\s+(.+)$/);
+        if (headerMatch) {
+          const level = headerMatch[1].length;
+          const content = parseInline(headerMatch[2]);
+          resultBlocks.push(`<h${level}>${content}</h${level}>`);
+          i++;
+          continue;
+        }
+
+        // Blockquote: lines starting with >
+        if (line.trim().startsWith('>')) {
+          const quoteLines = [];
+          while (i < lines.length && lines[i].trim().startsWith('>')) {
+            quoteLines.push(lines[i].replace(/^>\s?/, ''));
+            i++;
+          }
+          const quoteContent = quoteLines.map(l => parseInline(l)).join('<br>');
+          resultBlocks.push(`<blockquote><p>${quoteContent}</p></blockquote>`);
+          continue;
+        }
+
+        // Table: | col | col |
+        if (/^\|(.+)\|$/.test(line.trim())) {
+          const tableLines = [];
+          while (i < lines.length && /^\|(.+)\|$/.test(lines[i].trim())) {
+            tableLines.push(lines[i].trim());
+            i++;
+          }
+          if (tableLines.length >= 2) {
+            let tableHtml = '<div class="table-wrapper"><table>';
+            const headerCells = tableLines[0].slice(1, -1).split('|').map(c => c.trim());
+            let startIndex = 1;
+            if (/^\|[\s\-:]+(\|[\s\-:]+)+\|$/.test(tableLines[1])) {
+              tableHtml += '<thead><tr>' + headerCells.map(c => `<th>${parseInline(c)}</th>`).join('') + '</tr></thead>';
+              startIndex = 2;
+            }
+            tableHtml += '<tbody>';
+            for (let r = startIndex; r < tableLines.length; r++) {
+              const cells = tableLines[r].slice(1, -1).split('|').map(c => c.trim());
+              tableHtml += '<tr>' + cells.map(c => `<td>${parseInline(c)}</td>`).join('') + '</tr>';
+            }
+            tableHtml += '</tbody></table></div>';
+            resultBlocks.push(tableHtml);
+            continue;
+          }
+        }
+
+        // Unordered List: - or *
+        if (/^[\*\-]\s+/.test(line.trim())) {
+          const items = [];
+          while (i < lines.length && /^[\*\-]\s+/.test(lines[i].trim())) {
+            items.push(lines[i].trim().replace(/^[\*\-]\s+/, ''));
+            i++;
+          }
+          const listHtml = '<ul>' + items.map(item => `<li>${parseInline(item)}</li>`).join('') + '</ul>';
+          resultBlocks.push(listHtml);
+          continue;
+        }
+
+        // Ordered List: 1. 2. etc
+        if (/^\d+\.\s+/.test(line.trim())) {
+          const items = [];
+          while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
+            items.push(lines[i].trim().replace(/^\d+\.\s+/, ''));
+            i++;
+          }
+          const listHtml = '<ol>' + items.map(item => `<li>${parseInline(item)}</li>`).join('') + '</ol>';
+          resultBlocks.push(listHtml);
+          continue;
+        }
+
+        // Regular paragraph: gather consecutive text lines
+        const paraLines = [];
+        while (i < lines.length && lines[i].trim() && 
+               !lines[i].trim().startsWith('\x00CODEBLOCK_') &&
+               !lines[i].trim().startsWith('>') &&
+               !/^\|(.+)\|$/.test(lines[i].trim()) &&
+               !/^[\*\-]\s+/.test(lines[i].trim()) &&
+               !/^\d+\.\s+/.test(lines[i].trim()) &&
+               !lines[i].match(/^#{1,4}\s+/) &&
+               !/^(\-{3,}|\*{3,}|_{3,})$/.test(lines[i].trim())) {
+          paraLines.push(lines[i]);
+          i++;
+        }
+        if (paraLines.length > 0) {
+          resultBlocks.push(`<p>${paraLines.map(l => parseInline(l)).join('<br>')}</p>`);
+        }
+      }
+
+      // 4. Restore code blocks
+      let html = resultBlocks.join('');
+      html = html.replace(/\x00CODEBLOCK_(\d+)\x00/g, (match, index) => {
+        return codeBlocks[parseInt(index, 10)] || '';
+      });
+
+      return html;
     }
 
     // Copy Utilities
-    function copyCodeBlock(id) {
+    function copyCodeBlock(id, btnEl) {
       const codeEl = document.getElementById(id);
-      if (codeEl) {
-        copyText(codeEl.innerText);
-      }
+      if (!codeEl) return;
+      const text = codeEl.textContent || codeEl.innerText || '';
+      navigator.clipboard.writeText(text).then(() => {
+        if (btnEl) {
+          const original = btnEl.innerHTML;
+          btnEl.innerHTML = `
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg> Copied!
+          `;
+          btnEl.style.color = '#38bdf8';
+          setTimeout(() => {
+            btnEl.innerHTML = original;
+            btnEl.style.color = '';
+          }, 2000);
+        }
+        showToast('Code copied to clipboard!');
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast('Code copied to clipboard!');
+        } catch (e) {}
+        document.body.removeChild(ta);
+      });
     }
 
     function copyText(txt) {
       navigator.clipboard.writeText(txt).then(() => {
         showToast('Copied to clipboard!');
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = txt;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast('Copied to clipboard!');
+        } catch (e) {}
+        document.body.removeChild(ta);
       });
     }
 

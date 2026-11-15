@@ -149,6 +149,25 @@ class TestMobileGateway(unittest.TestCase):
             self.assertNotIn("mic-btn", html)
             self.assertNotIn("auto-tts-toggle", html)
 
+    def test_mobile_chat_markdown_interface(self):
+        """Verify chat UI includes markdown rendering for code blocks, quotes, tables, and typography."""
+        url = "http://127.0.0.1:8318/"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=3.0) as resp:
+            self.assertEqual(resp.status, 200)
+            html = resp.read().decode("utf-8")
+            # CSS styling checks
+            self.assertIn(".bubble blockquote", html)
+            self.assertIn(".code-block-wrapper", html)
+            self.assertIn(".code-header", html)
+            self.assertIn(".copy-btn", html)
+            self.assertIn(".table-wrapper", html)
+            # JS parser checks
+            self.assertIn("function renderMarkdown", html)
+            self.assertIn("function copyCodeBlock", html)
+            self.assertIn("blockquote", html)
+            self.assertIn("CODEBLOCK", html)
+
     def test_mobile_proxy_models_endpoint(self):
         url = "http://127.0.0.1:8318/v1/models"
         req = urllib.request.Request(url, headers={"Authorization": "Bearer sk-antigravity-claude"})

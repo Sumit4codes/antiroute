@@ -26,8 +26,8 @@ if [[ -f "${PID_FILE}" ]]; then
     rm -f "${PID_FILE}" "${SCRIPT_DIR}/tunnel.url"
 fi
 
-# Fallback: check and terminate any lingering pinggy/localhost.run forwarders for 8317
-LINGERING_PIDS="$(pgrep -f "ssh.*(a\.pinggy\.io|localhost\.run).*8317" || true)"
+# Fallback: check and terminate any lingering pinggy/localhost.run forwarders for 8317 or 8318
+LINGERING_PIDS="$(pgrep -f "ssh.*(a\.pinggy\.io|localhost\.run).*(8317|8318)" || true)"
 if [[ -n "${LINGERING_PIDS}" ]]; then
     for p in ${LINGERING_PIDS}; do
         kill -15 "${p}" 2>/dev/null || kill -9 "${p}" 2>/dev/null || true

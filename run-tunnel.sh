@@ -50,7 +50,7 @@ if ! curl -s http://127.0.0.1:8318/api/status >/dev/null 2>&1; then
 fi
 
 echo "Launching secure HTTPS tunnel via SSH..."
-> "${TUNNEL_LOG_FILE}"
+true > "${TUNNEL_LOG_FILE}"
 
 # Start Pinggy SSH tunnel in background forwarding port 8318 (Mobile Web Chat + /v1 proxy)
 nohup ssh -o StrictHostKeyChecking=no \
@@ -100,7 +100,7 @@ echo ""
 echo "📱 Smartphone Instructions:"
 echo "   1. Scan the QR code below or open the Web Chat URL in Safari / Chrome"
 echo "   2. Works on any network: Local Wi-Fi, 4G/5G Cellular, or Public Hotspots"
-echo "   3. Full Voice Talk & TTS Audio supported over secure HTTPS"
+echo "   3. Clean streaming markdown chat supported over secure HTTPS"
 echo "=================================================================="
 
 # Print ASCII QR Code for Web Chat

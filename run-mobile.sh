@@ -40,7 +40,7 @@ MOBILE_URL="$("${PYTHON_BIN}" -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'
 echo "=================================================================="
 echo " ✦ AntiRoute Mobile Gateway is Ready! ✦"
 echo "=================================================================="
-echo "1. Smartphone Web Chat (PWA with Voice):"
+echo "1. Smartphone Web Chat (PWA):"
 echo "   👉 ${MOBILE_URL}"
 echo ""
 echo "2. Smartphone Apps (Chatbox, NextChat):"

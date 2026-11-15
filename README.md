@@ -189,13 +189,11 @@ antiroute-mobile
 ```
 *This starts the mobile companion service and displays a scanable ASCII QR code in your terminal.*
 
-### 1. Instant Mobile Web Chat (PWA with Voice Talk)
+### 1. Instant Mobile Web Chat (PWA)
 Scan the terminal QR code or open in your phone's browser (Safari or Chrome):
 ```text
-http://<YOUR_LAN_IP>:8318
+http://<YOUR_LAN_IP>:8318?token=<YOUR_TOKEN>
 ```
-* 🎙️ **Voice Talk Mode**: Tap the mic button to speak questions aloud (HTML5 Web Speech API).
-* 🔊 **Audio Readout (TTS)**: Gemini reads answers back to you with speech synthesis.
 * ⚡ **Live SSE Streaming**: Answers stream in real-time token-by-token.
 * 📲 **Install as Native App**:
   * **iPhone (Safari)**: Tap Share `[↑]` &rarr; Scroll down &rarr; **Add to Home Screen**.
@@ -209,8 +207,8 @@ If you prefer a native third-party mobile app, **Chatbox** (free on iOS App Stor
 1. Open **Chatbox** &rarr; **Settings** &rarr; **Model Provider**.
 2. Select **OpenAI API**.
 3. Configure:
-   * **API Host / Base URL**: `http://<YOUR_LAN_IP>:8317/v1` (or `http://<YOUR_LAN_IP>:8318/v1`)
-   * **API Key**: `sk-antigravity-claude`
+   * **API Host / Base URL**: `http://<YOUR_LAN_IP>:8318/v1`
+   * **API Key / Token**: `<YOUR_MOBILE_TOKEN>`
    * **Model**: `gemini-3.8-flash-high` or `gemini-3.1-pro-preview`
 
 ---

@@ -143,8 +143,11 @@ class TestMobileGateway(unittest.TestCase):
             self.assertEqual(resp.status, 200)
             html = resp.read().decode("utf-8")
             self.assertIn("AntiRoute Gemini Mobile", html)
-            self.assertIn("Voice Talk Mode", html)
+            self.assertIn("PWA Mobile App", html)
             self.assertIn("gemini-3.8-flash-high", html)
+            self.assertNotIn("Voice Talk Mode", html)
+            self.assertNotIn("mic-btn", html)
+            self.assertNotIn("auto-tts-toggle", html)
 
     def test_mobile_proxy_models_endpoint(self):
         url = "http://127.0.0.1:8318/v1/models"

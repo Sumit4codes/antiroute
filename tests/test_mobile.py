@@ -94,6 +94,35 @@ class TestMobileGateway(unittest.TestCase):
             model_ids = [m["id"] for m in data["data"]]
             self.assertIn("gemini-3.8-flash-high", model_ids)
 
+    def test_404_keepalive_content_length(self):
+        """Verify 404 responses include Content-Length so HTTP/1.1 keep-alive clients do not hang."""
+        import http.client
+        conn = http.client.HTTPConnection("127.0.0.1", 8318, timeout=2.0)
+
+        # 1. Unknown GET (e.g. /favicon.ico)
+        conn.request("GET", "/favicon.ico")
+        resp = conn.getresponse()
+        self.assertEqual(resp.status, 404)
+        content_length = resp.getheader("Content-Length")
+        self.assertIsNotNone(content_length)
+        body = resp.read()
+        self.assertEqual(len(body), int(content_length))
+        data = json.loads(body.decode("utf-8"))
+        self.assertEqual(data.get("error"), "Endpoint not found")
+
+        # 2. Unknown POST outside /v1/ on the same keep-alive connection
+        conn.request("POST", "/nonexistent")
+        resp = conn.getresponse()
+        self.assertEqual(resp.status, 404)
+        content_length = resp.getheader("Content-Length")
+        self.assertIsNotNone(content_length)
+        body = resp.read()
+        self.assertEqual(len(body), int(content_length))
+        data = json.loads(body.decode("utf-8"))
+        self.assertEqual(data.get("error"), "Endpoint not found")
+
+        conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()

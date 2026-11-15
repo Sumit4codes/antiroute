@@ -99,6 +99,21 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type, x-api-key, anthropic-version")
         self.send_header("Access-Control-Expose-Headers", "*")
 
+    def send_error_response(self, code: int, message: str, content_type: str = "application/json"):
+        """Send an error response with proper framing (Content-Length) for HTTP/1.1 keep-alive clients."""
+        if content_type.startswith("application/json"):
+            body = json.dumps({"error": message}).encode("utf-8")
+        else:
+            body = message.encode("utf-8")
+
+        self.send_response(code)
+        self.send_cors_headers()
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
     def do_HEAD(self):
         """Handle HEAD requests similarly to GET without body."""
         self.do_GET()
@@ -153,11 +168,7 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
             return
 
         # Not found fallback
-        self.send_response(404)
-        self.send_cors_headers()
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(b'{"error": "Endpoint not found"}')
+        self.send_error_response(404, "Endpoint not found")
 
     def do_POST(self):
         parsed_path = self.path.split("?")[0]
@@ -165,15 +176,11 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
             self.proxy_request("POST")
             return
 
-        self.send_response(404)
-        self.send_cors_headers()
-        self.end_headers()
+        self.send_error_response(404, "Endpoint not found")
 
     def serve_file(self, filepath: Path, content_type: str):
         if not filepath.exists():
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"File not found")
+            self.send_error_response(404, "File not found", content_type="text/plain; charset=utf-8")
             return
 
         content = filepath.read_bytes()
@@ -183,7 +190,8 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(content)))
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()
-        self.wfile.write(content)
+        if self.command != "HEAD":
+            self.wfile.write(content)
 
     def handle_api_status(self):
         lan_ips = get_lan_ips()
@@ -221,7 +229,8 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
-        self.wfile.write(data)
+        if self.command != "HEAD":
+            self.wfile.write(data)
 
     def handle_api_qr(self):
         primary_ip = get_primary_ip()
@@ -242,11 +251,10 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(png_bytes)))
             self.send_header("Cache-Control", "public, max-age=3600")
             self.end_headers()
-            self.wfile.write(png_bytes)
+            if self.command != "HEAD":
+                self.wfile.write(png_bytes)
         except Exception as e:
-            self.send_response(500)
-            self.end_headers()
-            self.wfile.write(f"QR Error: {e}".encode())
+            self.send_error_response(500, f"QR Error: {e}", content_type="text/plain; charset=utf-8")
 
     def proxy_request(self, method: str):
         """Proxy incoming request to cli-proxy-api with real-time SSE streaming support."""
@@ -308,12 +316,7 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             try:
-                self.send_response(502)
-                self.send_cors_headers()
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                err = json.dumps({"error": f"AntiRoute Mobile Gateway Proxy Error: {e}"}).encode()
-                self.wfile.write(err)
+                self.send_error_response(502, f"AntiRoute Mobile Gateway Proxy Error: {e}")
             except Exception:
                 pass
         finally:

@@ -48,7 +48,7 @@ class TestMobileGateway(unittest.TestCase):
         self.assertIn("env", info)
         self.assertIn("MOBILE_CHAT_URL", info["env"])
         self.assertIn("OPENAI_BASE_URL", info["env"])
-        self.assertIn("sk-antigravity-claude", info["env"]["OPENAI_API_KEY"])
+        self.assertTrue(len(info["env"]["OPENAI_API_KEY"]) > 0)
         self.assertIn("gemini-3.8-flash-high", info["env"]["DEFAULT_MODEL"])
 
     def test_mobile_server_status_endpoint(self):
@@ -62,7 +62,69 @@ class TestMobileGateway(unittest.TestCase):
             self.assertIn("primary_ip", data)
             self.assertIn("mobile_chat_url", data)
             self.assertIn("api_endpoint", data)
+            self.assertNotIn("api_key", data)
             self.assertTrue(data.get("proxy_online"))
+
+    def test_status_endpoint_never_leaks_api_key(self):
+        """Security: Verify /api/status never returns api_key in payload."""
+        url = "http://127.0.0.1:8318/api/status"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=3.0) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            self.assertNotIn("api_key", data)
+
+    def test_unauthenticated_proxy_request_rejected(self):
+        """Security: Verify unauthenticated requests to /v1/ endpoints are rejected with 401."""
+        import urllib.error
+        url = "http://127.0.0.1:8318/v1/models"
+        req = urllib.request.Request(url)
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            urllib.request.urlopen(req, timeout=3.0)
+        self.assertEqual(ctx.exception.code, 401)
+        err_body = json.loads(ctx.exception.read().decode("utf-8"))
+        self.assertIn("error", err_body)
+        self.assertEqual(err_body["error"]["code"], 401)
+
+    def test_invalid_token_rejected(self):
+        """Security: Verify invalid token requests to /v1/ endpoints are rejected with 401."""
+        import urllib.error
+        url = "http://127.0.0.1:8318/v1/models"
+        req = urllib.request.Request(url, headers={"Authorization": "Bearer fake_token_999"})
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            urllib.request.urlopen(req, timeout=3.0)
+        self.assertEqual(ctx.exception.code, 401)
+
+    def test_mobile_token_authentication(self):
+        """Security: Verify per-install mobile token successfully authenticates."""
+        token = mobile_server.get_or_create_mobile_token()
+        self.assertTrue(len(token) >= 20)
+        url = "http://127.0.0.1:8318/v1/models"
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        with urllib.request.urlopen(req, timeout=4.0) as resp:
+            self.assertEqual(resp.status, 200)
+            data = json.loads(resp.read().decode("utf-8"))
+            self.assertIn("data", data)
+
+    def test_query_param_token_authentication(self):
+        """Security: Verify query param ?token= successfully authenticates."""
+        token = mobile_server.get_or_create_mobile_token()
+        url = f"http://127.0.0.1:8318/v1/models?token={token}"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=4.0) as resp:
+            self.assertEqual(resp.status, 200)
+            data = json.loads(resp.read().decode("utf-8"))
+            self.assertIn("data", data)
+
+    def test_token_file_permissions(self):
+        """Security: Verify .auth/mobile_token has strict 0600 file permissions."""
+        token_path = BASE_DIR / ".auth" / "mobile_token"
+        self.assertTrue(token_path.exists())
+        mode = token_path.stat().st_mode & 0o777
+        self.assertEqual(mode, 0o600)
+
+    def test_default_host_is_localhost(self):
+        """Security: Verify default host interface binds to localhost (127.0.0.1)."""
+        self.assertEqual(mobile_server.DEFAULT_HOST, "127.0.0.1")
 
     def test_mobile_server_qr_endpoint(self):
         url = "http://127.0.0.1:8318/api/qr"

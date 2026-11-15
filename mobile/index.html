@@ -871,8 +871,8 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">API Key</label>
-        <input type="text" class="form-input" id="api-key-input" value="sk-antigravity-claude">
+        <label class="form-label">Access Token / API Key</label>
+        <input type="text" class="form-input" id="api-key-input" placeholder="Enter mobile access token or API key">
       </div>
 
       <button class="btn-block" onclick="saveSettings()">Save Preferences</button>
@@ -895,8 +895,8 @@
       <div class="form-group">
         <label class="form-label">1. Chatbox App (iOS & Android)</label>
         <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:12.5px;line-height:1.6;">
-          • <strong>API Host:</strong> <code id="guide-host">http://10.166.250.215:8317/v1</code> <button class="copy-btn" onclick="copyText(document.getElementById('guide-host').innerText)" style="display:inline;margin-left:6px;">Copy</button><br>
-          • <strong>API Key:</strong> <code>sk-antigravity-claude</code> <button class="copy-btn" onclick="copyText('sk-antigravity-claude')" style="display:inline;margin-left:6px;">Copy</button><br>
+          • <strong>API Host:</strong> <code id="guide-host">http://127.0.0.1:8318/v1</code> <button class="copy-btn" onclick="copyText(document.getElementById('guide-host').innerText)" style="display:inline;margin-left:6px;">Copy</button><br>
+          • <strong>Access Token / Key:</strong> <code id="guide-key">token-or-key</code> <button class="copy-btn" onclick="copyText(document.getElementById('guide-key').innerText)" style="display:inline;margin-left:6px;">Copy</button><br>
           • <strong>Model:</strong> <code>gemini-3.8-flash-high</code>
         </div>
       </div>
@@ -927,7 +927,7 @@
   <script>
     // App State
     let currentModel = 'gemini-3.8-flash-high';
-    let apiKey = localStorage.getItem('antiroute_api_key') || 'sk-antigravity-claude';
+    let apiKey = localStorage.getItem('antiroute_api_key') || '';
     let autoTTS = localStorage.getItem('antiroute_auto_tts') === 'true';
     let voiceRate = parseFloat(localStorage.getItem('antiroute_voice_rate') || '1.0');
     let systemPromptType = localStorage.getItem('antiroute_persona') || 'general';
@@ -1000,6 +1000,16 @@
 
     // Initialize
     window.addEventListener('DOMContentLoaded', () => {
+      // Check for token in URL query parameter (e.g. from terminal QR scan)
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryToken = urlParams.get('token');
+      if (queryToken && queryToken.trim()) {
+        apiKey = queryToken.trim();
+        localStorage.setItem('antiroute_api_key', apiKey);
+        // Clean URL to prevent leaking token in browser address bar or screenshots
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
       loadSettings();
       fetchModels();
       checkBackendStatus();
@@ -1011,6 +1021,10 @@
       const hostEl = document.getElementById('guide-host');
       if (hostEl) {
         hostEl.textContent = `${window.location.origin}/v1`;
+      }
+      const keyEl = document.getElementById('guide-key');
+      if (keyEl && apiKey) {
+        keyEl.textContent = apiKey;
       }
     }
 
@@ -1394,7 +1408,7 @@
     }
 
     function saveSettings() {
-      apiKey = document.getElementById('api-key-input').value.trim() || 'sk-antigravity-claude';
+      apiKey = document.getElementById('api-key-input').value.trim();
       customPrompt = document.getElementById('custom-prompt-input').value.trim();
 
       localStorage.setItem('antiroute_api_key', apiKey);

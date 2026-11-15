@@ -215,8 +215,8 @@
         <button class="copy-btn" onclick="copyValue('api-host-val')">Copy</button>
       </div>
       <div class="code-box">
-        <span style="color:#94a3b8;">API Key:</span><br>
-        <span id="api-key-val">sk-antigravity-claude</span>
+        <span style="color:#94a3b8;">Access Token / API Key:</span><br>
+        <span id="api-key-val">&lt;YOUR_MOBILE_TOKEN&gt;</span>
         <button class="copy-btn" onclick="copyValue('api-key-val')">Copy</button>
       </div>
       <div class="code-box">
@@ -272,9 +272,18 @@
   <div class="toast" id="toast">Copied to clipboard!</div>
 
   <script>
+    let activeToken = '<YOUR_MOBILE_TOKEN>';
+
     window.addEventListener('DOMContentLoaded', () => {
       const origin = window.location.origin;
       const host = window.location.hostname;
+      const urlParams = new URLSearchParams(window.location.search);
+      const tokenParam = urlParams.get('token');
+      if (tokenParam) {
+        activeToken = tokenParam;
+        document.getElementById('api-key-val').textContent = tokenParam;
+      }
+
       // Update dynamic host display
       document.getElementById('api-host-val').textContent = `${origin}/v1`;
       document.getElementById('siri-url').textContent = `${origin}/v1/chat/completions`;
@@ -288,7 +297,7 @@
 
     function copyCurl() {
       const origin = window.location.origin;
-      const cmd = `curl -X POST "${origin}/v1/chat/completions" \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer sk-antigravity-claude" \\\n  -d '{\n    "model": "gemini-3.8-flash-high",\n    "messages": [{"role": "user", "content": "Hello Gemini!"}]\n  }'`;
+      const cmd = `curl -X POST "${origin}/v1/chat/completions" \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer ${activeToken}" \\\n  -d '{\n    "model": "gemini-3.8-flash-high",\n    "messages": [{"role": "user", "content": "Hello Gemini!"}]\n  }'`;
       copyText(cmd);
     }
 

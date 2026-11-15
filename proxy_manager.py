@@ -61,6 +61,21 @@ def get_primary_ip() -> str:
     return lan_ips[0][1] if lan_ips else "127.0.0.1"
 
 
+def get_mobile_token() -> str:
+    """Retrieve or generate per-install mobile auth token."""
+    try:
+        import mobile_server
+        return mobile_server.get_or_create_mobile_token()
+    except Exception:
+        token_path = AUTH_DIR / "mobile_token"
+        if token_path.exists():
+            try:
+                return token_path.read_text().strip()
+            except Exception:
+                pass
+        return ""
+
+
 def get_mobile_pid() -> Optional[int]:
     """Return running mobile server PID if process is alive, else None."""
     if MOBILE_PID_PATH.exists():
@@ -442,13 +457,15 @@ def get_agent_connection_info(tool: str) -> Dict[str, Any]:
 
     if tool_key == "mobile":
         primary_ip = get_primary_ip()
+        token = get_mobile_token()
+        token_param = f"?token={token}" if token else ""
         info["name"] = "Smartphone / Mobile (Chatbox, PWA, Siri)"
         info["description"] = "Connect your smartphone (iOS/Android) via Web Chat PWA, Chatbox, or Siri Shortcuts."
         info["env"] = {
-            "MOBILE_CHAT_URL": f"http://{primary_ip}:8318",
-            "MOBILE_SETUP_URL": f"http://{primary_ip}:8318/setup",
-            "OPENAI_BASE_URL": f"http://{primary_ip}:8317/v1",
-            "OPENAI_API_KEY": key,
+            "MOBILE_CHAT_URL": f"http://{primary_ip}:8318{token_param}",
+            "MOBILE_SETUP_URL": f"http://{primary_ip}:8318/setup{token_param}",
+            "OPENAI_BASE_URL": f"http://{primary_ip}:8318/v1",
+            "OPENAI_API_KEY": token or key,
             "DEFAULT_MODEL": "gemini-3.8-flash-high"
         }
         info["commands"] = [
@@ -458,10 +475,10 @@ def get_agent_connection_info(tool: str) -> Dict[str, Any]:
         info["snippet"] = (
             "# ✦ AntiRoute Smartphone & Mobile Connection ✦\n"
             f"# 1. Instant Mobile Web Chat (PWA with Voice Talk):\n"
-            f"#    http://{primary_ip}:8318\n\n"
+            f"#    http://{primary_ip}:8318{token_param}\n\n"
             f"# 2. Chatbox App (iOS & Android Settings):\n"
-            f"#    API Host: http://{primary_ip}:8317/v1\n"
-            f"#    API Key:  {key}\n"
+            f"#    API Host: http://{primary_ip}:8318/v1\n"
+            f"#    API Key / Access Token: {token or key}\n"
             f"#    Model:    gemini-3.8-flash-high\n\n"
             f"# 3. Open Setup Guide & Terminal QR Code:\n"
             f"#    antiroute mobile\n"

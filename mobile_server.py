@@ -11,8 +11,10 @@ import json
 import time
 import signal
 import socket
+import secrets
 import urllib.request
 import urllib.error
+import urllib.parse
 import http.client
 from http.server import HTTPServer, ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
@@ -23,12 +25,55 @@ BASE_DIR = Path(__file__).resolve().parent
 MOBILE_DIR = BASE_DIR / "mobile"
 PID_PATH = BASE_DIR / "mobile.pid"
 LOG_PATH = BASE_DIR / "mobile.log"
+AUTH_DIR = BASE_DIR / ".auth"
+TOKEN_PATH = AUTH_DIR / "mobile_token"
 
-DEFAULT_HOST = "0.0.0.0"
+DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8318
 PROXY_HOST = "127.0.0.1"
 PROXY_PORT = 8317
 API_KEY = "sk-antigravity-claude"
+
+
+def get_or_create_mobile_token() -> str:
+    """Return existing per-install mobile auth token or generate a secure new one with 0600 permissions."""
+    env_token = os.environ.get("ANTIROUTE_MOBILE_TOKEN") or os.environ.get("MOBILE_TOKEN")
+    if env_token and env_token.strip():
+        return env_token.strip()
+
+    AUTH_DIR.mkdir(parents=True, exist_ok=True)
+    if TOKEN_PATH.exists():
+        try:
+            tok = TOKEN_PATH.read_text().strip()
+            if tok and len(tok) >= 16:
+                return tok
+        except Exception:
+            pass
+
+    new_token = secrets.token_urlsafe(32)
+    try:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+        mode = 0o600
+        fd = os.open(str(TOKEN_PATH), flags, mode)
+        with os.fdopen(fd, "w") as f:
+            f.write(new_token + "\n")
+        try:
+            os.chmod(TOKEN_PATH, 0o600)
+        except OSError:
+            pass
+    except Exception:
+        pass
+    return new_token
+
+
+def get_mobile_url(ip: Optional[str] = None, port: int = DEFAULT_PORT, include_token: bool = True) -> str:
+    """Return the mobile gateway URL with optional authentication token parameter."""
+    target_ip = ip or get_primary_ip()
+    base = f"http://{target_ip}:{port}"
+    if include_token:
+        token = get_or_create_mobile_token()
+        return f"{base}?token={token}"
+    return base
 
 
 def get_lan_ips() -> List[Tuple[str, str]]:
@@ -114,6 +159,54 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
+    def is_authorized(self) -> bool:
+        """Verify client authentication via Authorization header, x-api-key, or query parameter."""
+        valid_tokens = {get_or_create_mobile_token(), API_KEY}
+
+        # 1. Authorization header (Bearer <token> or raw <token>)
+        auth_hdr = self.headers.get("Authorization", "")
+        if auth_hdr.startswith("Bearer "):
+            token = auth_hdr[7:].strip()
+            if token in valid_tokens:
+                return True
+        elif auth_hdr.strip() in valid_tokens:
+            return True
+
+        # 2. Custom header variants
+        for hdr_name in ["x-api-key", "X-Antiroute-Token", "X-API-Key"]:
+            val = self.headers.get(hdr_name, "").strip()
+            if val and val in valid_tokens:
+                return True
+
+        # 3. URL Query parameter ?token= or ?api_key=
+        if "?" in self.path:
+            query = urllib.parse.urlparse(self.path).query
+            params = urllib.parse.parse_qs(query)
+            for param_name in ["token", "api_key", "key"]:
+                if param_name in params:
+                    for t in params[param_name]:
+                        if t.strip() in valid_tokens:
+                            return True
+
+        return False
+
+    def send_unauthorized(self, message: str = "Unauthorized: Missing or invalid authentication token"):
+        """Send 401 Unauthorized in OpenAI API error format."""
+        body = json.dumps({
+            "error": {
+                "message": message,
+                "type": "authentication_error",
+                "code": 401
+            }
+        }).encode("utf-8")
+        self.send_response(401)
+        self.send_cors_headers()
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
     def do_HEAD(self):
         """Handle HEAD requests similarly to GET without body."""
         self.do_GET()
@@ -152,18 +245,26 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
             self.serve_file(MOBILE_DIR / "icon.svg", "image/svg+xml")
             return
 
-        # 5. Status API
+        # 5. Status API (sanitized health info only, no secrets)
         if parsed_path == "/api/status":
             self.handle_api_status()
             return
 
-        # 6. QR Code Image Generator API
+        # 6. QR Code Image Generator API (restricted to localhost or authenticated requests)
         if parsed_path == "/api/qr":
+            client_ip = self.client_address[0] if self.client_address else "127.0.0.1"
+            is_local = client_ip in ("127.0.0.1", "::1", "localhost")
+            if not is_local and not self.is_authorized():
+                self.send_error_response(403, "QR code generation is restricted to localhost or authenticated clients")
+                return
             self.handle_api_qr()
             return
 
-        # 7. Proxy API calls (/v1/...) to cli-proxy-api
+        # 7. Proxy API calls (/v1/...) to cli-proxy-api (authentication mandatory)
         if parsed_path.startswith("/v1/"):
+            if not self.is_authorized():
+                self.send_unauthorized()
+                return
             self.proxy_request("GET")
             return
 
@@ -173,6 +274,9 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed_path = self.path.split("?")[0]
         if parsed_path.startswith("/v1/"):
+            if not self.is_authorized():
+                self.send_unauthorized()
+                return
             self.proxy_request("POST")
             return
 
@@ -215,11 +319,10 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
             "proxy_online": proxy_healthy,
             "primary_ip": primary_ip,
             "interfaces": lan_ips,
-            "mobile_chat_url": f"http://{primary_ip}:{DEFAULT_PORT}",
+            "mobile_chat_url": get_mobile_url(primary_ip, DEFAULT_PORT, include_token=False),
             "mobile_setup_url": f"http://{primary_ip}:{DEFAULT_PORT}/setup",
             "api_endpoint": f"http://{primary_ip}:{DEFAULT_PORT}/v1",
-            "direct_proxy_endpoint": f"http://{primary_ip}:{PROXY_PORT}/v1",
-            "api_key": API_KEY,
+            "direct_proxy_endpoint": f"http://127.0.0.1:{PROXY_PORT}/v1",
             "models": models or ["gemini-3.8-flash-high", "gemini-3.1-pro-preview"],
             "server_time": time.time()
         }
@@ -234,7 +337,7 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
 
     def handle_api_qr(self):
         primary_ip = get_primary_ip()
-        url = f"http://{primary_ip}:{DEFAULT_PORT}"
+        url = get_mobile_url(primary_ip, DEFAULT_PORT, include_token=True)
         try:
             import qrcode
             qr = qrcode.QRCode(version=1, box_size=8, border=2)
@@ -249,7 +352,7 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
             self.send_cors_headers()
             self.send_header("Content-Type", "image/png")
             self.send_header("Content-Length", str(len(png_bytes)))
-            self.send_header("Cache-Control", "public, max-age=3600")
+            self.send_header("Cache-Control", "private, no-cache")
             self.end_headers()
             if self.command != "HEAD":
                 self.wfile.write(png_bytes)
@@ -258,6 +361,10 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
 
     def proxy_request(self, method: str):
         """Proxy incoming request to cli-proxy-api with real-time SSE streaming support."""
+        if not self.is_authorized():
+            self.send_unauthorized()
+            return
+
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length) if content_length > 0 else None
 
@@ -265,13 +372,11 @@ class MobileRequestHandler(BaseHTTPRequestHandler):
         forward_headers = {}
         for key, val in self.headers.items():
             k_low = key.lower()
-            if k_low not in ["host", "content-length", "connection"]:
+            if k_low not in ["host", "content-length", "connection", "authorization"]:
                 forward_headers[key] = val
 
-        # Ensure authorization header is forwarded or default applied
-        if "authorization" not in [k.lower() for k in forward_headers]:
-            forward_headers["Authorization"] = f"Bearer {API_KEY}"
-
+        # Forward authenticated requests to internal daemon using backend API key
+        forward_headers["Authorization"] = f"Bearer {API_KEY}"
         forward_headers["Host"] = f"{PROXY_HOST}:{PROXY_PORT}"
 
         conn = None
@@ -363,17 +468,18 @@ def run_server(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT):
     signal.signal(signal.SIGTERM, handle_signal)
 
     primary_ip = get_primary_ip()
-    mobile_url = f"http://{primary_ip}:{port}"
+    token = get_or_create_mobile_token()
+    mobile_url = get_mobile_url(primary_ip, port, include_token=True)
 
     print("==================================================================")
     print(" ✦ AntiRoute Mobile Gateway & Web Chat Cockpit ✦")
     print("==================================================================")
     print(f"• Listening on:        http://{host}:{port}")
     print(f"• Smartphone Web Chat: {mobile_url}")
-    print(f"• Smartphone Setup:    {mobile_url}/setup")
-    print(f"• Mobile OpenAI API:   {mobile_url}/v1")
-    print(f"• Direct Proxy API:    http://{primary_ip}:{PROXY_PORT}/v1")
-    print(f"• API Key:             {API_KEY}")
+    print(f"• Smartphone Setup:    http://{primary_ip}:{port}/setup")
+    print(f"• Mobile OpenAI API:   http://{primary_ip}:{port}/v1")
+    print(f"• Access Token:        {token}")
+    print(f"• Direct Proxy API:    http://127.0.0.1:{PROXY_PORT}/v1")
     print("==================================================================")
 
     print_ascii_qr(mobile_url)
@@ -442,10 +548,19 @@ if __name__ == "__main__":
     parser.add_argument("--stop", action="store_true", help="Stop background daemon")
     parser.add_argument("--status", action="store_true", help="Check gateway status")
     parser.add_argument("--qr", action="store_true", help="Print terminal ASCII QR Code")
-    parser.add_argument("--host", default=DEFAULT_HOST, help="Host interface to bind")
+    parser.add_argument("--lan", action="store_true", help="Bind to 0.0.0.0 for LAN smartphone access")
+    parser.add_argument("--host", default=None, help="Host interface to bind")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port to listen on")
 
     args = parser.parse_args()
+
+    # Determine host interface
+    if args.lan:
+        bind_host = "0.0.0.0"
+    elif args.host:
+        bind_host = args.host
+    else:
+        bind_host = DEFAULT_HOST
 
     if args.stop:
         ok, msg = stop_daemon()
@@ -455,25 +570,28 @@ if __name__ == "__main__":
     if args.status:
         pid = get_mobile_pid()
         primary_ip = get_primary_ip()
+        token = get_or_create_mobile_token()
         if pid:
             print(f"Mobile Gateway: RUNNING (PID {pid})")
-            print(f"URL:            http://{primary_ip}:{args.port}")
+            print(f"URL:            http://{primary_ip}:{args.port}?token={token}")
         else:
             print("Mobile Gateway: STOPPED")
         sys.exit(0)
 
     if args.qr:
         primary_ip = get_primary_ip()
-        print_ascii_qr(f"http://{primary_ip}:{args.port}")
+        mobile_url = get_mobile_url(primary_ip, args.port, include_token=True)
+        print_ascii_qr(mobile_url)
         sys.exit(0)
 
     if args.start:
-        ok, msg = start_daemon(host=args.host, port=args.port)
+        ok, msg = start_daemon(host=bind_host, port=args.port)
         print(msg)
         if ok:
             primary_ip = get_primary_ip()
-            print_ascii_qr(f"http://{primary_ip}:{args.port}")
+            mobile_url = get_mobile_url(primary_ip, args.port, include_token=True)
+            print_ascii_qr(mobile_url)
         sys.exit(0 if ok else 1)
 
     # Default: Run foreground server
-    run_server(host=args.host, port=args.port)
+    run_server(host=bind_host, port=args.port)

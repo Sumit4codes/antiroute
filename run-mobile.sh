@@ -26,24 +26,28 @@ fi
 # If systemd service is installed, use systemd to manage it cleanly
 if systemctl --user is-enabled antiroute-mobile >/dev/null 2>&1; then
     systemctl --user start antiroute-mobile
+elif ! curl -s http://127.0.0.1:8318/api/status >/dev/null 2>&1; then
+    "${PYTHON_BIN}" "${SCRIPT_DIR}/mobile_server.py" --start --lan >/dev/null 2>&1 || true
 fi
 
 # Print ASCII QR code and connection info
 "${PYTHON_BIN}" "${SCRIPT_DIR}/mobile_server.py" --qr
 
 PRIMARY_IP="$("${PYTHON_BIN}" -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); import mobile_server; print(mobile_server.get_primary_ip())")"
+TOKEN="$("${PYTHON_BIN}" -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); import mobile_server; print(mobile_server.get_or_create_mobile_token())")"
+MOBILE_URL="$("${PYTHON_BIN}" -c "import sys; sys.path.insert(0, '${SCRIPT_DIR}'); import mobile_server; print(mobile_server.get_mobile_url(include_token=True))")"
 
 echo "=================================================================="
 echo " ✦ AntiRoute Mobile Gateway is Ready! ✦"
 echo "=================================================================="
 echo "1. Smartphone Web Chat (PWA with Voice):"
-echo "   👉 http://${PRIMARY_IP}:8318"
+echo "   👉 ${MOBILE_URL}"
 echo ""
 echo "2. Smartphone Apps (Chatbox, NextChat):"
-echo "   • Base URL: http://${PRIMARY_IP}:8317/v1 (or http://${PRIMARY_IP}:8318/v1)"
-echo "   • API Key:  sk-antigravity-claude"
-echo "   • Model:    gemini-3.8-flash-high"
+echo "   • Base URL:     http://${PRIMARY_IP}:8318/v1"
+echo "   • Access Token: ${TOKEN}"
+echo "   • Model:        gemini-3.8-flash-high"
 echo ""
 echo "3. Mobile Setup & Siri Guide:"
-echo "   👉 http://${PRIMARY_IP}:8318/setup"
+echo "   👉 http://${PRIMARY_IP}:8318/setup?token=${TOKEN}"
 echo "=================================================================="

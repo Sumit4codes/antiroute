@@ -828,10 +828,12 @@ def run_cli_commands():
         # Ensure services are up
         pm.start_proxy()
         primary_ip = pm.get_primary_ip()
-        mobile_url = f"http://{primary_ip}:8318"
-        
-        # Print QR Code
         import mobile_server
+        token = mobile_server.get_or_create_mobile_token()
+        mobile_url = mobile_server.get_mobile_url(primary_ip, 8318, include_token=True)
+        setup_url = f"http://{primary_ip}:8318/setup?token={token}"
+        
+        # Print QR Code with auth token
         mobile_server.print_ascii_qr(mobile_url)
         print("==================================================================")
         print(" ✦ AntiRoute Mobile Gateway & Web Chat ✦")
@@ -840,12 +842,12 @@ def run_cli_commands():
         print(f"   👉 {mobile_url}")
         print("")
         print(f"2. Smartphone Apps (Chatbox, NextChat):")
-        print(f"   • Base URL: http://{primary_ip}:8317/v1 (or {mobile_url}/v1)")
-        print(f"   • API Key:  sk-antigravity-claude")
-        print(f"   • Model:    gemini-3.8-flash-high")
+        print(f"   • Base URL:     http://{primary_ip}:8318/v1")
+        print(f"   • Access Token: {token}")
+        print(f"   • Model:        gemini-3.8-flash-high")
         print("")
         print(f"3. Mobile Setup & Siri Guide:")
-        print(f"   👉 {mobile_url}/setup")
+        print(f"   👉 {setup_url}")
         print("==================================================================")
 
     elif args.command == "tunnel":

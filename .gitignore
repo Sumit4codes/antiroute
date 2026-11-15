@@ -17,6 +17,8 @@ proxy.log
 *.pid
 *.log
 *.url
+dist/
+*.sha256
 
 # Python Cache & Virtual Environments
 __pycache__/

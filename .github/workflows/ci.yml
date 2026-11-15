@@ -112,11 +112,11 @@ jobs:
           mkdir -p "dist/${ARCHIVE_NAME}"
 
           # Copy essential binaries, scripts, configs, and docs
-          cp -r cli-proxy-api antiroute tui.py tui.sh proxy_manager.py \
+          cp -r cli-proxy-api antiroute tui.py tui.sh proxy_manager.py mobile_server.py \
                 config.yaml config.example.yaml opencode.json .env.example \
                 install.sh export-env.sh run-*.sh setup-systemd.sh \
-                start-proxy.sh stop-proxy.sh status-proxy.sh \
-                README.md LICENSE static/ assets/ "dist/${ARCHIVE_NAME}/"
+                start-proxy.sh stop-proxy.sh status-proxy.sh stop-tunnel.sh \
+                README.md LICENSE static/ assets/ mobile/ "dist/${ARCHIVE_NAME}/"
 
           cd dist
           tar -czf "${ARCHIVE_NAME}.tar.gz" "${ARCHIVE_NAME}"
